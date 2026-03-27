@@ -1,0 +1,1913 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>직선 도선이 만드는 자기장 - 인터랙티브 시뮬레이션</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #111827;
+  --bg-card: #1a2235;
+  --bg-card-hover: #1f2a40;
+  --accent-cyan: #06b6d4;
+  --accent-cyan-dim: #0891b2;
+  --accent-orange: #f97316;
+  --accent-orange-dim: #ea580c;
+  --accent-green: #10b981;
+  --accent-red: #ef4444;
+  --accent-purple: #a855f7;
+  --accent-yellow: #eab308;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-dim: #64748b;
+  --border: #1e293b;
+  --border-active: #334155;
+  --glow-cyan: 0 0 20px rgba(6, 182, 212, 0.3);
+  --glow-orange: 0 0 20px rgba(249, 115, 22, 0.3);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Noto Sans KR', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  user-select: none;
+}
+
+.header {
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 18px 32px;
+  position: relative;
+  overflow: hidden;
+}
+.header::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(ellipse at 30% 50%, rgba(6,182,212,0.08) 0%, transparent 60%),
+              radial-gradient(ellipse at 70% 50%, rgba(249,115,22,0.06) 0%, transparent 60%);
+  pointer-events: none;
+}
+.header-content {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+.header h1 {
+  font-size: 20px;
+  font-weight: 900;
+  background: linear-gradient(135deg, var(--accent-cyan), #38bdf8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.header .subtitle {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+  letter-spacing: 1px;
+}
+.header .badge {
+  background: rgba(6,182,212,0.15);
+  border: 1px solid rgba(6,182,212,0.3);
+  color: var(--accent-cyan);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.tab-nav {
+  display: flex;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+.tab-btn {
+  padding: 13px 22px;
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.3s;
+  white-space: nowrap;
+}
+.tab-btn:hover { color: var(--text-secondary); }
+.tab-btn.active { color: var(--accent-cyan); }
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--accent-cyan);
+  border-radius: 2px 2px 0 0;
+}
+
+.main-container {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 20px 32px;
+}
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ===== SETUP PHASE ===== */
+.setup-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.setup-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 20px;
+}
+.setup-step-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.step-dot {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  border: 2px solid var(--border);
+  color: var(--text-dim);
+  transition: all 0.4s;
+}
+.step-dot.completed {
+  border-color: var(--accent-green);
+  background: rgba(16,185,129,0.15);
+  color: var(--accent-green);
+}
+.step-dot.active {
+  border-color: var(--accent-cyan);
+  background: rgba(6,182,212,0.15);
+  color: var(--accent-cyan);
+  box-shadow: 0 0 12px rgba(6,182,212,0.25);
+}
+.step-line {
+  width: 32px; height: 2px;
+  background: var(--border);
+  transition: background 0.4s;
+}
+.step-line.completed { background: var(--accent-green); }
+
+.setup-instruction {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.setup-instruction .eng {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-left: 6px;
+}
+
+.phase-btn {
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s;
+  border: none;
+}
+.phase-btn.primary {
+  background: var(--accent-cyan);
+  color: #0a0e1a;
+}
+.phase-btn.primary:hover {
+  background: #22d3ee;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(6,182,212,0.3);
+}
+.phase-btn.primary:disabled {
+  background: var(--border);
+  color: var(--text-dim);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.phase-btn.secondary {
+  background: rgba(249,115,22,0.15);
+  color: var(--accent-orange);
+  border: 1px solid rgba(249,115,22,0.3);
+}
+.phase-btn.secondary:hover {
+  background: rgba(249,115,22,0.25);
+}
+
+.setup-main {
+  display: grid;
+  grid-template-columns: 260px 1fr 280px;
+  gap: 16px;
+  min-height: 560px;
+}
+
+/* Toolbox */
+.toolbox {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.toolbox-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.tool-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--bg-secondary);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  cursor: grab;
+  transition: all 0.2s;
+  position: relative;
+}
+.tool-item:active { cursor: grabbing; }
+.tool-item:hover {
+  border-color: var(--accent-cyan);
+  background: var(--bg-card-hover);
+  transform: translateX(4px);
+}
+.tool-item.placed {
+  border-color: var(--accent-green);
+  background: rgba(16,185,129,0.08);
+  opacity: 0.5;
+  cursor: default;
+  pointer-events: none;
+}
+.tool-icon {
+  width: 40px; height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.tool-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tool-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.tool-desc {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+/* Workbench */
+.workbench-wrapper {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.workbench-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Guide Panel */
+.guide-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+.guide-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+}
+.guide-card h3 {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.guide-card p {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+.guide-card .formula {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  color: var(--text-primary);
+  text-align: center;
+  padding: 8px;
+  background: rgba(6,182,212,0.05);
+  border-radius: 6px;
+  border: 1px solid rgba(6,182,212,0.15);
+  margin: 8px 0;
+}
+
+.checklist { display: flex; flex-direction: column; gap: 6px; }
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+  transition: color 0.3s;
+}
+.check-item.done { color: var(--accent-green); }
+.check-icon {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  transition: all 0.3s;
+  flex-shrink: 0;
+}
+.check-item.done .check-icon {
+  border-color: var(--accent-green);
+  background: rgba(16,185,129,0.15);
+  color: var(--accent-green);
+}
+
+/* ===== SIMULATION PHASE ===== */
+.sim-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr 280px;
+  gap: 16px;
+  min-height: 560px;
+}
+.controls-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+.control-group { display: flex; flex-direction: column; gap: 6px; }
+.control-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-dim);
+}
+.control-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--accent-cyan);
+  line-height: 1;
+}
+.control-value .unit {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-left: 4px;
+}
+input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+  box-shadow: var(--glow-cyan);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+input[type="range"].orange::-webkit-slider-thumb {
+  background: var(--accent-orange);
+  box-shadow: var(--glow-orange);
+}
+.direction-toggle { display: flex; gap: 6px; }
+.dir-btn {
+  flex: 1;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+.dir-btn.active {
+  border-color: var(--accent-orange);
+  background: rgba(249,115,22,0.1);
+  color: var(--accent-orange);
+}
+.divider { height: 1px; background: var(--border); }
+
+.canvas-area {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.info-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+}
+.info-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+}
+.info-card h3 {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.info-card .formula {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px;
+  color: var(--text-primary);
+  text-align: center;
+  padding: 8px;
+  background: rgba(6,182,212,0.05);
+  border-radius: 6px;
+  border: 1px solid rgba(6,182,212,0.15);
+  margin-bottom: 6px;
+}
+.info-card p { font-size: 11px; color: var(--text-secondary); line-height: 1.7; }
+.computed-values { display: flex; flex-direction: column; gap: 6px; }
+.computed-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+}
+.computed-row:last-child { border-bottom: none; }
+.computed-row .label { font-size: 11px; color: var(--text-secondary); }
+.computed-row .value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-green);
+}
+
+.view-modes { display: flex; gap: 5px; }
+.view-btn {
+  flex: 1;
+  padding: 7px 5px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-dim);
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+.view-btn.active {
+  border-color: var(--accent-purple);
+  background: rgba(168,85,247,0.1);
+  color: var(--accent-purple);
+}
+.checkbox-group { display: flex; flex-direction: column; gap: 5px; }
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.checkbox-item input[type="checkbox"] {
+  accent-color: var(--accent-cyan);
+  width: 13px; height: 13px;
+}
+
+/* Vector Tab */
+.vector-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+/* Data Tab */
+.data-layout { display: grid; grid-template-columns: 380px 1fr; gap: 16px; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.data-table th {
+  background: var(--bg-secondary);
+  color: var(--accent-cyan);
+  font-weight: 600;
+  padding: 9px 10px;
+  text-align: center;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 2px solid var(--accent-cyan);
+}
+.data-table td {
+  padding: 7px 10px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+
+/* Intent Tab */
+.intent-layout { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+.intent-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+}
+.intent-card h2 {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.intent-card h2 .num {
+  width: 26px; height: 26px;
+  background: rgba(6,182,212,0.15);
+  border: 1px solid rgba(6,182,212,0.3);
+  border-radius: 8px;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.intent-card p, .intent-card li { font-size: 13px; color: var(--text-secondary); line-height: 1.9; }
+.intent-card ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.intent-card li::before { content: '▸'; color: var(--accent-orange); margin-right: 8px; }
+.eng-term { color: var(--accent-cyan); font-weight: 600; font-size: 11px; }
+
+/* Drag ghost */
+.drag-ghost {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.85;
+  transform: scale(1.05);
+  filter: drop-shadow(0 8px 24px rgba(6,182,212,0.4));
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: var(--bg-card);
+  border: 1px solid var(--accent-green);
+  color: var(--accent-green);
+  padding: 12px 28px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 8px 30px rgba(16,185,129,0.25);
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 999;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* Phase transition */
+.phase-fade-out {
+  animation: fadeOut 0.4s ease forwards;
+}
+.phase-fade-in {
+  animation: fadeIn 0.5s ease forwards;
+}
+@keyframes fadeOut { to { opacity: 0; transform: translateY(-10px); } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 1200px) {
+  .setup-main, .sim-layout { grid-template-columns: 1fr; }
+  .vector-layout, .data-layout { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-content">
+    <div>
+      <h1>직선 도선이 만드는 자기장 시뮬레이션</h1>
+      <div class="subtitle">MAGNETIC FIELD OF A STRAIGHT CURRENT-CARRYING WIRE — INTERACTIVE LAB</div>
+    </div>
+    <div class="badge">Ampère's Law Simulation</div>
+  </div>
+</div>
+
+<div class="tab-nav">
+  <button class="tab-btn active" data-tab="sim">실험 시뮬레이션</button>
+  <button class="tab-btn" data-tab="vector">벡터 합성</button>
+  <button class="tab-btn" data-tab="data">데이터 분석</button>
+  <button class="tab-btn" data-tab="intent">제작 의도</button>
+</div>
+
+<div class="main-container">
+  <!-- ====== TAB 1: SIMULATION (Setup + Run) ====== -->
+  <div class="tab-panel active" id="panel-sim">
+
+    <!-- PHASE 1: SETUP -->
+    <div id="setupPhase" class="setup-container">
+      <div class="setup-top-bar">
+        <div style="display:flex;align-items:center;gap:16px;">
+          <div class="setup-step-indicator">
+            <div class="step-dot active" id="stepDot1">1</div>
+            <div class="step-line" id="stepLine1"></div>
+            <div class="step-dot" id="stepDot2">2</div>
+            <div class="step-line" id="stepLine2"></div>
+            <div class="step-dot" id="stepDot3">3</div>
+            <div class="step-line" id="stepLine3"></div>
+            <div class="step-dot" id="stepDot4">4</div>
+          </div>
+          <div class="setup-instruction" id="setupInstruction">
+            모눈종이 위에 나침반을 올려놓으세요 <span class="eng">Place the compass on the grid paper</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="phase-btn secondary" id="resetSetupBtn">초기화</button>
+          <button class="phase-btn primary" id="startSimBtn" disabled>시뮬레이션 시작 →</button>
+        </div>
+      </div>
+
+      <div class="setup-main">
+        <!-- Toolbox -->
+        <div class="toolbox">
+          <div class="toolbox-title">실험 도구함 (Toolbox)</div>
+          <div class="tool-item" id="tool-gridpaper" data-tool="gridpaper" draggable="true">
+            <div class="tool-icon" style="background:rgba(148,163,184,0.1);color:#94a3b8;">📐</div>
+            <div class="tool-info">
+              <div class="tool-name">모눈종이</div>
+              <div class="tool-desc">Grid Paper — 기준면 배치</div>
+            </div>
+          </div>
+          <div class="tool-item" id="tool-compass" data-tool="compass" draggable="true">
+            <div class="tool-icon" style="background:rgba(239,68,68,0.1);color:#ef4444;">🧭</div>
+            <div class="tool-info">
+              <div class="tool-name">나침반</div>
+              <div class="tool-desc">Compass — 자기장 방향 측정</div>
+            </div>
+          </div>
+          <div class="tool-item" id="tool-wire" data-tool="wire" draggable="true">
+            <div class="tool-icon" style="background:rgba(249,115,22,0.1);color:#f97316;">⚡</div>
+            <div class="tool-info">
+              <div class="tool-name">직선 도선</div>
+              <div class="tool-desc">Straight Wire — 나침반 위 1cm 배치</div>
+            </div>
+          </div>
+          <div class="tool-item" id="tool-supply" data-tool="supply" draggable="true">
+            <div class="tool-icon" style="background:rgba(168,85,247,0.1);color:#a855f7;">🔌</div>
+            <div class="tool-info">
+              <div class="tool-name">직류 전원장치</div>
+              <div class="tool-desc">DC Power Supply — 전류 공급</div>
+            </div>
+          </div>
+          <div class="tool-item" id="tool-meter" data-tool="meter" draggable="true">
+            <div class="tool-icon" style="background:rgba(234,179,8,0.1);color:#eab308;">📊</div>
+            <div class="tool-info">
+              <div class="tool-name">전류계</div>
+              <div class="tool-desc">Ammeter — 전류 측정</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Workbench -->
+        <div class="workbench-wrapper" id="workbenchArea">
+          <canvas id="workbenchCanvas" class="workbench-canvas"></canvas>
+        </div>
+
+        <!-- Guide Panel -->
+        <div class="guide-panel">
+          <div class="guide-card">
+            <h3>실험 구성 안내</h3>
+            <p>왼쪽 도구함에서 실험 도구를 <strong>드래그하여</strong> 작업대 위 <strong style="color:var(--accent-cyan);">파란색 점선 영역</strong>에 놓으세요. 순서에 맞게 배치해야 다음 단계로 넘어갑니다.</p>
+          </div>
+          <div class="guide-card">
+            <h3>배치 순서 (Setup Order)</h3>
+            <div class="checklist" id="setupChecklist">
+              <div class="check-item" id="check-gridpaper">
+                <div class="check-icon">1</div>
+                <span>모눈종이 배치 (Grid Paper)</span>
+              </div>
+              <div class="check-item" id="check-compass">
+                <div class="check-icon">2</div>
+                <span>나침반 정렬 (Compass)</span>
+              </div>
+              <div class="check-item" id="check-wire">
+                <div class="check-icon">3</div>
+                <span>도선 배치 (Wire, r=1cm)</span>
+              </div>
+              <div class="check-item" id="check-supply">
+                <div class="check-icon">4</div>
+                <span>전원장치 연결 (Power Supply)</span>
+              </div>
+              <div class="check-item" id="check-meter">
+                <div class="check-icon">5</div>
+                <span>전류계 연결 (Ammeter)</span>
+              </div>
+            </div>
+          </div>
+          <div class="guide-card">
+            <h3>핵심 원리</h3>
+            <div class="formula">B = μ₀I / (2πr)</div>
+            <p>도선 위 1.0cm에서 나침반 바늘이 전류에 의한 자기장과 지구자기장의 합성 벡터 방향으로 편향됩니다.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 2: SIMULATION -->
+    <div id="simPhase" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:14px;font-weight:700;color:var(--accent-green);">✓ 실험 환경 구성 완료</span>
+          <span style="font-size:11px;color:var(--text-dim);">— 변인을 조작하여 실험을 수행하세요</span>
+        </div>
+        <button class="phase-btn secondary" id="backToSetupBtn">← 환경 재구성</button>
+      </div>
+      <div class="sim-layout">
+        <div class="controls-panel">
+          <div class="control-group">
+            <div class="control-label">전류 (Current, I)</div>
+            <div class="control-value" id="currentDisplay">1.0<span class="unit">A</span></div>
+            <input type="range" id="currentSlider" min="0" max="2.5" step="0.1" value="1.0">
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim)">
+              <span>0.0 A</span><span>2.5 A</span>
+            </div>
+          </div>
+          <div class="control-group">
+            <div class="control-label">도선-센서 거리 (Distance, r)</div>
+            <div class="control-value" id="distDisplay">1.0<span class="unit">cm</span></div>
+            <input type="range" class="orange" id="distSlider" min="0.5" max="5.0" step="0.1" value="1.0">
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim)">
+              <span>0.5 cm</span><span>5.0 cm</span>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="control-group">
+            <div class="control-label">전류 방향 (Direction)</div>
+            <div class="direction-toggle">
+              <button class="dir-btn active" id="dirUp">↑ 위</button>
+              <button class="dir-btn" id="dirDown">↓ 아래</button>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="control-group">
+            <div class="control-label">시점 (View Mode)</div>
+            <div class="view-modes">
+              <button class="view-btn active" data-view="top">위에서</button>
+              <button class="view-btn" data-view="side">옆에서</button>
+              <button class="view-btn" data-view="3d">3D</button>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="control-group">
+            <div class="control-label">표시 옵션 (Display)</div>
+            <div class="checkbox-group">
+              <label class="checkbox-item"><input type="checkbox" id="showFieldLines" checked> 자기력선</label>
+              <label class="checkbox-item"><input type="checkbox" id="showCompass" checked> 나침반</label>
+              <label class="checkbox-item"><input type="checkbox" id="showVectors" checked> 벡터 화살표</label>
+              <label class="checkbox-item"><input type="checkbox" id="showGrid"> 격자</label>
+              <label class="checkbox-item"><input type="checkbox" id="showEarth" checked> 지구자기장</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="canvas-area">
+          <canvas id="simCanvas" width="680" height="560"></canvas>
+        </div>
+
+        <div class="info-panel">
+          <div class="info-card">
+            <h3>앙페르의 법칙</h3>
+            <div class="formula">B = μ₀I / (2πr)</div>
+            <p>전류(I)에 비례, 거리(r)에 반비례합니다.</p>
+          </div>
+          <div class="info-card">
+            <h3>계산 결과</h3>
+            <div class="computed-values">
+              <div class="computed-row"><span class="label">B<sub>도선</sub></span><span class="value" id="bWireVal">20.0 μT</span></div>
+              <div class="computed-row"><span class="label">B<sub>지구</sub></span><span class="value" id="bEarthVal">50.6 μT</span></div>
+              <div class="computed-row"><span class="label">B<sub>net</sub></span><span class="value" id="bNetVal">54.4 μT</span></div>
+              <div class="computed-row"><span class="label">편향각 θ</span><span class="value" id="thetaVal">21.6°</span></div>
+              <div class="computed-row"><span class="label">tanθ</span><span class="value" id="tanVal">0.396</span></div>
+            </div>
+          </div>
+          <div class="info-card">
+            <h3>오른손 법칙</h3>
+            <p>엄지 → 전류 방향, 네 손가락 감아쥐는 방향 → 자기장 방향</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: Vector -->
+  <div class="tab-panel" id="panel-vector">
+    <div class="vector-layout">
+      <div class="canvas-area" style="min-height:520px;">
+        <canvas id="vectorCanvas" width="580" height="520"></canvas>
+      </div>
+      <div class="info-panel">
+        <div class="info-card">
+          <h3>자기장 벡터 합성 원리</h3>
+          <div class="formula">tanθ = B<sub>wire</sub> / B<sub>earth</sub></div>
+          <p>나침반 바늘은 지구자기장(B<sub>지구</sub>)과 도선 자기장(B<sub>도선</sub>)의 합성 벡터 방향을 가리킵니다.</p>
+        </div>
+        <div class="control-group">
+          <div class="control-label">전류 조절</div>
+          <div class="control-value" id="vecCurrentDisplay">1.0<span class="unit">A</span></div>
+          <input type="range" id="vecCurrentSlider" min="0" max="2.5" step="0.1" value="1.0">
+        </div>
+        <div class="info-card">
+          <h3>벡터 성분</h3>
+          <div class="computed-values">
+            <div class="computed-row"><span class="label">B<sub>wire</sub></span><span class="value" id="vecBwire">20.0 μT</span></div>
+            <div class="computed-row"><span class="label">B<sub>earth</sub></span><span class="value" id="vecBearth">50.6 μT</span></div>
+            <div class="computed-row"><span class="label">|B<sub>net</sub>|</span><span class="value" id="vecBnet">54.4 μT</span></div>
+            <div class="computed-row"><span class="label">θ</span><span class="value" id="vecTheta">21.6°</span></div>
+          </div>
+        </div>
+        <div class="info-card">
+          <h3>지구자기장 역산</h3>
+          <p>여러 전류값에서 1/tanθ vs I 그래프의 기울기가 B<sub>earth(exp)</sub>입니다.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: Data -->
+  <div class="tab-panel" id="panel-data">
+    <div class="data-layout">
+      <div class="controls-panel">
+        <div class="info-card">
+          <h3>가상 실험 데이터</h3>
+          <p>r = 1.0 cm 고정, I = 0.5~2.5A. 노이즈 포함 데이터입니다.</p>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>I (A)</th><th>B<sub>th</sub> (μT)</th><th>θ (°)</th><th>tanθ</th><th>1/tanθ</th></tr></thead>
+          <tbody id="dataTableBody"></tbody>
+        </table>
+        <button id="addNoiseBtn" style="
+          padding: 9px 16px; border: 1px solid var(--accent-orange); border-radius: 8px;
+          background: rgba(249,115,22,0.1); color: var(--accent-orange);
+          font-family: 'Noto Sans KR'; font-size: 12px; font-weight: 500; cursor: pointer;
+        ">새 노이즈 데이터 생성</button>
+      </div>
+      <div class="canvas-area" style="min-height:520px;">
+        <canvas id="graphCanvas" width="680" height="500"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: Intent -->
+  <div class="tab-panel" id="panel-intent">
+    <div class="intent-layout">
+      <div class="intent-card">
+        <h2><span class="num">1</span> 제작 배경 및 목적 <span class="eng-term">Background & Purpose</span></h2>
+        <p>본 시뮬레이션은 2026학년도 과학아카데미 포트폴리오 「직선 도선이 만드는 자기장과 지구자기장 측정」 실험을 기반으로 합니다. 학생들이 실제 실험 전 가상으로 실험 환경을 구성하고 변인을 조작하여, 자기장의 물리적 개념을 시각적·수치적으로 체감할 수 있도록 설계하였습니다.</p>
+      </div>
+      <div class="intent-card">
+        <h2><span class="num">2</span> 실험 환경 구성 단계 <span class="eng-term">Setup Phase Design</span></h2>
+        <ul>
+          <li><strong>드래그 앤 드롭 (Drag & Drop)</strong>: 5종의 실험 도구를 순서에 맞게 작업대 위에 배치하며 실험 셋업 과정을 학습합니다.</li>
+          <li><strong>단계별 안내 (Step-by-Step Guide)</strong>: 각 도구의 배치 위치가 하이라이트 표시되며, 올바른 위치에 놓아야 다음 단계로 진행됩니다.</li>
+          <li><strong>실험 절차 내면화 (Procedural Knowledge)</strong>: 모눈종이 → 나침반 정렬 → 도선 배치 → 전원장치 → 전류계의 순서를 자연스럽게 익힙니다.</li>
+        </ul>
+      </div>
+      <div class="intent-card">
+        <h2><span class="num">3</span> 시뮬레이션 구성 <span class="eng-term">Simulation Components</span></h2>
+        <ul>
+          <li><strong>실험 시뮬레이션</strong>: 전류(I), 거리(r), 전류 방향 조작. Top/Side/3D 시점.</li>
+          <li><strong>벡터 합성</strong>: B_earth·B_wire 벡터 합성 다이어그램.</li>
+          <li><strong>데이터 분석</strong>: 1/tanθ vs I 그래프와 선형 회귀로 B_earth 역산.</li>
+        </ul>
+      </div>
+      <div class="intent-card">
+        <h2><span class="num">4</span> 교육적 활용 <span class="eng-term">Pedagogical Use</span></h2>
+        <ul>
+          <li><strong>사전 학습 (Pre-Lab)</strong>: 실험 전 환경 구성 및 변인 조작 연습</li>
+          <li><strong>개념 강화 (Reinforcement)</strong>: 오른손 법칙과 벡터 합성의 시각적 이해</li>
+          <li><strong>데이터 리터러시 (Data Literacy)</strong>: 노이즈 데이터에서 패턴 추출 능력 배양</li>
+          <li><strong>탐구 보고서 (Report Writing)</strong>: 시뮬레이션 결과를 근거로 오차 분석 연습</li>
+        </ul>
+      </div>
+      <div class="intent-card">
+        <h2><span class="num">5</span> 실험 조건 <span class="eng-term">Experimental Setup</span></h2>
+        <ul>
+          <li><strong>통제 변인</strong>: 도선-센서 거리 r = 1.0 cm</li>
+          <li><strong>조작 변인</strong>: 전류 I = 0.5 ~ 2.5 A (0.5 A 단위)</li>
+          <li><strong>참값</strong>: INTERMAGNET 청양 관측소 기준 약 50.6 μT</li>
+          <li><strong>안전</strong>: 최대 전류 2.5 A 제한 (과열·감전 방지)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ==================== GLOBALS ====================
+const MU0 = 4 * Math.PI * 1e-7;
+const B_EARTH = 50.6e-6;
+let current = 1.0, distance = 0.01, direction = 1, viewMode = 'top';
+let showFieldLines = true, showCompass = true, showVectors = true, showGrid = false, showEarth = true;
+let animFrame = 0;
+
+function calcBwire(I, r) { return r > 0 ? (MU0 * Math.abs(I)) / (2 * Math.PI * r) : 0; }
+function calcTheta(Bw, Be) { return Be > 0 ? Math.atan2(Bw, Be) * 180 / Math.PI : 90; }
+
+// ==================== TABS ====================
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'vector') drawVector();
+    if (btn.dataset.tab === 'data') { generateData(); drawGraph(); }
+    if (btn.dataset.tab === 'sim') resizeWorkbench();
+  });
+});
+
+// ==================== SETUP PHASE ====================
+const toolOrder = ['gridpaper', 'compass', 'wire', 'supply', 'meter'];
+const toolLabels = {
+  gridpaper: '모눈종이',
+  compass: '나침반',
+  wire: '직선 도선',
+  supply: '직류 전원장치',
+  meter: '전류계'
+};
+const stepInstructions = [
+  '모눈종이를 작업대 중앙에 배치하세요 <span class="eng">Place the grid paper on the workbench</span>',
+  '나침반을 모눈종이 중앙에 정렬하세요 <span class="eng">Align the compass on the grid paper</span>',
+  '직선 도선을 나침반 위에 수평으로 배치하세요 <span class="eng">Place the wire above the compass</span>',
+  '직류 전원장치를 연결하세요 <span class="eng">Connect the DC power supply</span>',
+  '전류계를 회로에 직렬 연결하세요 <span class="eng">Connect the ammeter in series</span>'
+];
+let placedTools = [];
+let currentSetupStep = 0;
+let isDragging = false;
+let dragTool = null;
+let dragOffsetX = 0, dragOffsetY = 0;
+let ghostEl = null;
+
+// Workbench canvas
+const wbCanvas = document.getElementById('workbenchCanvas');
+const wbCtx = wbCanvas.getContext('2d');
+
+function resizeWorkbench() {
+  const wrapper = document.getElementById('workbenchArea');
+  if (!wrapper) return;
+  const rect = wrapper.getBoundingClientRect();
+  wbCanvas.width = rect.width;
+  wbCanvas.height = rect.height;
+  drawWorkbench();
+}
+window.addEventListener('resize', resizeWorkbench);
+setTimeout(resizeWorkbench, 100);
+
+// Drop zone definitions (relative to canvas center)
+function getDropZones() {
+  const W = wbCanvas.width, H = wbCanvas.height;
+  const cx = W / 2, cy = H / 2;
+  return {
+    gridpaper: { x: cx - 110, y: cy - 80, w: 220, h: 160, label: '모눈종이' },
+    compass:   { x: cx - 40, y: cy - 40, w: 80, h: 80, label: '나침반' },
+    wire:      { x: cx - 130, y: cy - 70, w: 260, h: 16, label: '도선' },
+    supply:    { x: W - 170, y: cy - 50, w: 120, h: 100, label: '전원장치' },
+    meter:     { x: W - 170, y: cy + 70, w: 120, h: 70, label: '전류계' }
+  };
+}
+
+function drawWorkbench() {
+  const W = wbCanvas.width, H = wbCanvas.height;
+  if (W === 0 || H === 0) return;
+  const cx = W / 2, cy = H / 2;
+  wbCtx.clearRect(0, 0, W, H);
+
+  // Background - lab bench
+  const bgGrad = wbCtx.createLinearGradient(0, 0, 0, H);
+  bgGrad.addColorStop(0, '#0d1117');
+  bgGrad.addColorStop(1, '#111820');
+  wbCtx.fillStyle = bgGrad;
+  wbCtx.fillRect(0, 0, W, H);
+
+  // Subtle bench texture
+  wbCtx.strokeStyle = 'rgba(255,255,255,0.015)';
+  wbCtx.lineWidth = 0.5;
+  for (let y = 0; y < H; y += 20) {
+    wbCtx.beginPath(); wbCtx.moveTo(0, y); wbCtx.lineTo(W, y); wbCtx.stroke();
+  }
+
+  const zones = getDropZones();
+  const currentToolKey = toolOrder[currentSetupStep];
+
+  // Draw placed items
+  placedTools.forEach((tool, i) => {
+    const zone = zones[tool];
+    drawPlacedTool(wbCtx, tool, zone, i);
+  });
+
+  // Draw active drop zone highlight
+  if (currentSetupStep < toolOrder.length) {
+    const zone = zones[currentToolKey];
+    // Pulsing glow
+    const pulse = 0.4 + Math.sin(Date.now() / 500) * 0.15;
+    wbCtx.strokeStyle = `rgba(6,182,212,${pulse})`;
+    wbCtx.lineWidth = 2;
+    wbCtx.setLineDash([8, 5]);
+    roundRectPath(wbCtx, zone.x, zone.y, zone.w, zone.h, 8);
+    wbCtx.stroke();
+    wbCtx.setLineDash([]);
+
+    // Zone label
+    wbCtx.fillStyle = `rgba(6,182,212,${pulse})`;
+    wbCtx.font = '12px Noto Sans KR';
+    wbCtx.textAlign = 'center';
+    wbCtx.fillText(`여기에 ${zone.label}을(를) 놓으세요`, zone.x + zone.w / 2, zone.y + zone.h / 2 + 4);
+  }
+
+  // Connection wires between placed items
+  if (placedTools.includes('supply') || placedTools.includes('meter')) {
+    drawConnectionWires(wbCtx, zones);
+  }
+
+  // Title
+  wbCtx.fillStyle = 'rgba(255,255,255,0.25)';
+  wbCtx.font = '11px Noto Sans KR';
+  wbCtx.textAlign = 'left';
+  wbCtx.fillText('실험 작업대 (Lab Workbench)', 14, 22);
+
+  if (placedTools.length === toolOrder.length) {
+    wbCtx.fillStyle = 'rgba(16,185,129,0.8)';
+    wbCtx.font = 'bold 14px Noto Sans KR';
+    wbCtx.textAlign = 'center';
+    wbCtx.fillText('✓ 모든 도구 배치 완료! — 시뮬레이션을 시작하세요', W / 2, H - 18);
+  }
+}
+
+function drawPlacedTool(c, tool, zone, index) {
+  if (tool === 'gridpaper') {
+    // Grid paper
+    c.fillStyle = 'rgba(200,220,230,0.06)';
+    c.fillRect(zone.x, zone.y, zone.w, zone.h);
+    c.strokeStyle = 'rgba(148,163,184,0.15)';
+    c.lineWidth = 0.5;
+    for (let gx = zone.x; gx <= zone.x + zone.w; gx += 16) {
+      c.beginPath(); c.moveTo(gx, zone.y); c.lineTo(gx, zone.y + zone.h); c.stroke();
+    }
+    for (let gy = zone.y; gy <= zone.y + zone.h; gy += 16) {
+      c.beginPath(); c.moveTo(zone.x, gy); c.lineTo(zone.x + zone.w, gy); c.stroke();
+    }
+    c.strokeStyle = 'rgba(148,163,184,0.3)';
+    c.lineWidth = 1;
+    roundRectPath(c, zone.x, zone.y, zone.w, zone.h, 4);
+    c.stroke();
+    // Cardinal labels
+    c.fillStyle = 'rgba(148,163,184,0.5)';
+    c.font = '9px Noto Sans KR';
+    c.textAlign = 'center';
+    c.fillText('북(N)', zone.x + zone.w / 2, zone.y - 4);
+    c.fillText('남(S)', zone.x + zone.w / 2, zone.y + zone.h + 12);
+    c.textAlign = 'left';
+    c.fillText('서(W)', zone.x - 28, zone.y + zone.h / 2 + 3);
+    c.textAlign = 'right';
+    c.fillText('동(E)', zone.x + zone.w + 28, zone.y + zone.h / 2 + 3);
+  }
+
+  if (tool === 'compass') {
+    const ccx = zone.x + zone.w / 2, ccy = zone.y + zone.h / 2;
+    const cr = zone.w / 2 - 4;
+    // Body
+    c.strokeStyle = 'rgba(200,200,200,0.3)';
+    c.lineWidth = 2;
+    c.beginPath(); c.arc(ccx, ccy, cr, 0, Math.PI * 2); c.stroke();
+    c.fillStyle = 'rgba(255,255,255,0.03)';
+    c.fill();
+    // Needle (pointing North)
+    c.strokeStyle = '#ef4444';
+    c.lineWidth = 2.5;
+    c.beginPath(); c.moveTo(ccx, ccy); c.lineTo(ccx, ccy - cr + 6); c.stroke();
+    c.strokeStyle = 'rgba(255,255,255,0.4)';
+    c.beginPath(); c.moveTo(ccx, ccy); c.lineTo(ccx, ccy + cr - 6); c.stroke();
+    // Center dot
+    c.fillStyle = '#94a3b8';
+    c.beginPath(); c.arc(ccx, ccy, 3, 0, Math.PI * 2); c.fill();
+    // NSEW marks
+    c.fillStyle = 'rgba(239,68,68,0.7)';
+    c.font = 'bold 8px sans-serif';
+    c.textAlign = 'center';
+    c.fillText('N', ccx, ccy - cr - 3);
+  }
+
+  if (tool === 'wire') {
+    const wy = zone.y + zone.h / 2;
+    // Copper wire
+    const wGrad = c.createLinearGradient(zone.x, wy - 5, zone.x, wy + 5);
+    wGrad.addColorStop(0, '#c2410c');
+    wGrad.addColorStop(0.3, '#f97316');
+    wGrad.addColorStop(0.7, '#fb923c');
+    wGrad.addColorStop(1, '#c2410c');
+    c.fillStyle = wGrad;
+    roundRectPath(c, zone.x, wy - 5, zone.w, 10, 4);
+    c.fill();
+    // r label
+    c.fillStyle = 'rgba(249,115,22,0.7)';
+    c.font = '10px JetBrains Mono';
+    c.textAlign = 'center';
+    c.fillText('r = 1.0 cm ↕', zone.x + zone.w / 2, wy - 14);
+    // Current arrow
+    c.strokeStyle = 'rgba(249,115,22,0.5)';
+    c.lineWidth = 1;
+    c.setLineDash([3, 3]);
+    c.beginPath(); c.moveTo(zone.x + 20, wy); c.lineTo(zone.x + zone.w - 20, wy); c.stroke();
+    c.setLineDash([]);
+    drawSmallArrow(c, zone.x + zone.w - 20, wy, 0, 'rgba(249,115,22,0.5)');
+    c.fillStyle = 'rgba(249,115,22,0.4)';
+    c.font = '9px JetBrains Mono';
+    c.fillText('I →', zone.x + zone.w - 40, wy + 20);
+  }
+
+  if (tool === 'supply') {
+    c.fillStyle = 'rgba(168,85,247,0.08)';
+    c.strokeStyle = 'rgba(168,85,247,0.4)';
+    c.lineWidth = 1.5;
+    roundRectPath(c, zone.x, zone.y, zone.w, zone.h, 8);
+    c.fill(); c.stroke();
+    c.fillStyle = '#a855f7';
+    c.font = 'bold 11px Noto Sans KR';
+    c.textAlign = 'center';
+    c.fillText('DC Power Supply', zone.x + zone.w / 2, zone.y + 28);
+    c.fillStyle = 'rgba(168,85,247,0.6)';
+    c.font = '10px JetBrains Mono';
+    c.fillText('0.0 ~ 2.5 A', zone.x + zone.w / 2, zone.y + 48);
+    // Knob
+    c.fillStyle = 'rgba(168,85,247,0.3)';
+    c.beginPath(); c.arc(zone.x + zone.w / 2, zone.y + 72, 12, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = 'rgba(168,85,247,0.5)';
+    c.lineWidth = 2;
+    c.beginPath(); c.arc(zone.x + zone.w / 2, zone.y + 72, 12, 0, Math.PI * 2); c.stroke();
+    // + - terminals
+    c.fillStyle = '#ef4444';
+    c.font = 'bold 14px sans-serif';
+    c.fillText('+', zone.x + 18, zone.y + zone.h - 8);
+    c.fillStyle = '#3b82f6';
+    c.fillText('−', zone.x + zone.w - 18, zone.y + zone.h - 8);
+  }
+
+  if (tool === 'meter') {
+    c.fillStyle = 'rgba(234,179,8,0.08)';
+    c.strokeStyle = 'rgba(234,179,8,0.4)';
+    c.lineWidth = 1.5;
+    roundRectPath(c, zone.x, zone.y, zone.w, zone.h, 8);
+    c.fill(); c.stroke();
+    c.fillStyle = '#eab308';
+    c.font = 'bold 11px Noto Sans KR';
+    c.textAlign = 'center';
+    c.fillText('AMMETER', zone.x + zone.w / 2, zone.y + 24);
+    // Display
+    c.fillStyle = 'rgba(0,0,0,0.4)';
+    roundRectPath(c, zone.x + 20, zone.y + 32, zone.w - 40, 24, 4);
+    c.fill();
+    c.fillStyle = '#eab308';
+    c.font = '14px JetBrains Mono';
+    c.fillText('0.000 A', zone.x + zone.w / 2, zone.y + 50);
+  }
+}
+
+function drawConnectionWires(c, zones) {
+  c.strokeStyle = 'rgba(100,120,160,0.25)';
+  c.lineWidth = 2;
+  c.setLineDash([6, 4]);
+
+  const wireZ = zones.wire;
+  const supZ = zones.supply;
+  const metZ = zones.meter;
+
+  if (placedTools.includes('supply') && placedTools.includes('wire')) {
+    // Supply + to wire right end
+    c.beginPath();
+    c.moveTo(supZ.x, supZ.y + supZ.h - 14);
+    c.lineTo(wireZ.x + wireZ.w, wireZ.y + wireZ.h / 2);
+    c.stroke();
+  }
+  if (placedTools.includes('meter') && placedTools.includes('wire')) {
+    // Meter to wire left end
+    c.beginPath();
+    c.moveTo(metZ.x, metZ.y + 20);
+    c.lineTo(wireZ.x, wireZ.y + wireZ.h / 2);
+    c.stroke();
+  }
+  if (placedTools.includes('supply') && placedTools.includes('meter')) {
+    c.beginPath();
+    c.moveTo(supZ.x + supZ.w / 2, supZ.y + supZ.h);
+    c.lineTo(metZ.x + metZ.w / 2, metZ.y);
+    c.stroke();
+  }
+  c.setLineDash([]);
+}
+
+function drawSmallArrow(c, x, y, angle, color) {
+  c.save();
+  c.translate(x, y);
+  c.rotate(angle);
+  c.fillStyle = color;
+  c.beginPath();
+  c.moveTo(6, 0);
+  c.lineTo(-3, -4);
+  c.lineTo(-3, 4);
+  c.closePath();
+  c.fill();
+  c.restore();
+}
+
+// ===== DRAG & DROP =====
+document.querySelectorAll('.tool-item').forEach(el => {
+  el.addEventListener('dragstart', e => {
+    const toolKey = el.dataset.tool;
+    if (toolOrder[currentSetupStep] !== toolKey) {
+      e.preventDefault();
+      showToast(`⚠️ 지금은 "${toolLabels[toolOrder[currentSetupStep]]}"을(를) 먼저 배치하세요!`, '#f97316');
+      return;
+    }
+    dragTool = toolKey;
+    e.dataTransfer.setDragImage(new Image(), 0, 0); // hide default ghost
+    // Create custom ghost
+    ghostEl = document.createElement('div');
+    ghostEl.className = 'drag-ghost';
+    ghostEl.innerHTML = el.innerHTML;
+    ghostEl.style.cssText = `
+      padding: 10px 14px; background: var(--bg-card); border: 2px solid var(--accent-cyan);
+      border-radius: 10px; display: flex; align-items: center; gap: 10px;
+      font-family: 'Noto Sans KR'; color: var(--text-primary);
+    `;
+    document.body.appendChild(ghostEl);
+  });
+
+  el.addEventListener('drag', e => {
+    if (ghostEl && e.clientX > 0) {
+      ghostEl.style.left = (e.clientX - 60) + 'px';
+      ghostEl.style.top = (e.clientY - 25) + 'px';
+    }
+  });
+
+  el.addEventListener('dragend', e => {
+    if (ghostEl) { ghostEl.remove(); ghostEl = null; }
+    dragTool = null;
+  });
+});
+
+const workbenchEl = document.getElementById('workbenchArea');
+workbenchEl.addEventListener('dragover', e => { e.preventDefault(); });
+workbenchEl.addEventListener('drop', e => {
+  e.preventDefault();
+  if (!dragTool) return;
+  if (ghostEl) { ghostEl.remove(); ghostEl = null; }
+
+  const rect = wbCanvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const zones = getDropZones();
+  const zone = zones[dragTool];
+
+  // Check if drop is near the correct zone
+  const zCx = zone.x + zone.w / 2, zCy = zone.y + zone.h / 2;
+  const dist = Math.sqrt((mx - zCx) ** 2 + (my - zCy) ** 2);
+  const threshold = Math.max(zone.w, zone.h) * 0.9;
+
+  if (dist < threshold) {
+    placedTools.push(dragTool);
+    document.getElementById('tool-' + dragTool).classList.add('placed');
+    document.getElementById('check-' + dragTool).classList.add('done');
+    document.getElementById('check-' + dragTool).querySelector('.check-icon').textContent = '✓';
+
+    // Update step indicators
+    const dotEl = document.getElementById('stepDot' + (currentSetupStep + 1));
+    if (dotEl) { dotEl.classList.remove('active'); dotEl.classList.add('completed'); dotEl.textContent = '✓'; }
+    const lineEl = document.getElementById('stepLine' + (currentSetupStep + 1));
+    if (lineEl) lineEl.classList.add('completed');
+
+    currentSetupStep++;
+
+    if (currentSetupStep < toolOrder.length) {
+      const nextDot = document.getElementById('stepDot' + (currentSetupStep + 1));
+      if (nextDot) nextDot.classList.add('active');
+      document.getElementById('setupInstruction').innerHTML = stepInstructions[currentSetupStep];
+      showToast(`✓ ${toolLabels[dragTool]} 배치 완료!`, '#10b981');
+    } else {
+      document.getElementById('setupInstruction').innerHTML =
+        '모든 도구 배치 완료! 시뮬레이션을 시작하세요 <span class="eng">Setup complete — Start the simulation</span>';
+      document.getElementById('startSimBtn').disabled = false;
+      showToast('🎉 실험 환경 구성 완료! 시뮬레이션을 시작하세요.', '#10b981');
+    }
+
+    drawWorkbench();
+  } else {
+    showToast('⚠️ 파란색 점선 영역 가까이에 놓아주세요!', '#f97316');
+  }
+  dragTool = null;
+});
+
+// Touch support for mobile
+document.querySelectorAll('.tool-item').forEach(el => {
+  let touchGhost = null;
+  el.addEventListener('touchstart', e => {
+    const toolKey = el.dataset.tool;
+    if (toolOrder[currentSetupStep] !== toolKey) {
+      showToast(`⚠️ 지금은 "${toolLabels[toolOrder[currentSetupStep]]}"을(를) 먼저 배치하세요!`, '#f97316');
+      return;
+    }
+    dragTool = toolKey;
+    const touch = e.touches[0];
+    touchGhost = document.createElement('div');
+    touchGhost.className = 'drag-ghost';
+    touchGhost.innerHTML = el.innerHTML;
+    touchGhost.style.cssText = `
+      padding: 10px 14px; background: #1a2235; border: 2px solid #06b6d4;
+      border-radius: 10px; display: flex; align-items: center; gap: 10px;
+      font-family: 'Noto Sans KR'; color: #f1f5f9;
+      left: ${touch.clientX - 60}px; top: ${touch.clientY - 25}px;
+    `;
+    document.body.appendChild(touchGhost);
+    e.preventDefault();
+  }, { passive: false });
+
+  el.addEventListener('touchmove', e => {
+    if (touchGhost && e.touches[0].clientX > 0) {
+      touchGhost.style.left = (e.touches[0].clientX - 60) + 'px';
+      touchGhost.style.top = (e.touches[0].clientY - 25) + 'px';
+    }
+    e.preventDefault();
+  }, { passive: false });
+
+  el.addEventListener('touchend', e => {
+    if (touchGhost) { touchGhost.remove(); touchGhost = null; }
+    if (!dragTool) return;
+    const touch = e.changedTouches[0];
+    const rect = wbCanvas.getBoundingClientRect();
+    const mx = touch.clientX - rect.left;
+    const my = touch.clientY - rect.top;
+    const zones = getDropZones();
+    const zone = zones[dragTool];
+    const zCx = zone.x + zone.w / 2, zCy = zone.y + zone.h / 2;
+    const dist = Math.sqrt((mx - zCx) ** 2 + (my - zCy) ** 2);
+    if (dist < Math.max(zone.w, zone.h) * 0.9) {
+      // same placement logic as drop handler
+      placedTools.push(dragTool);
+      document.getElementById('tool-' + dragTool).classList.add('placed');
+      document.getElementById('check-' + dragTool).classList.add('done');
+      document.getElementById('check-' + dragTool).querySelector('.check-icon').textContent = '✓';
+      const dotEl = document.getElementById('stepDot' + (currentSetupStep + 1));
+      if (dotEl) { dotEl.classList.remove('active'); dotEl.classList.add('completed'); dotEl.textContent = '✓'; }
+      const lineEl = document.getElementById('stepLine' + (currentSetupStep + 1));
+      if (lineEl) lineEl.classList.add('completed');
+      currentSetupStep++;
+      if (currentSetupStep < toolOrder.length) {
+        const nextDot = document.getElementById('stepDot' + (currentSetupStep + 1));
+        if (nextDot) nextDot.classList.add('active');
+        document.getElementById('setupInstruction').innerHTML = stepInstructions[currentSetupStep];
+        showToast(`✓ ${toolLabels[dragTool]} 배치 완료!`, '#10b981');
+      } else {
+        document.getElementById('setupInstruction').innerHTML =
+          '모든 도구 배치 완료! <span class="eng">Setup complete</span>';
+        document.getElementById('startSimBtn').disabled = false;
+        showToast('🎉 실험 환경 구성 완료!', '#10b981');
+      }
+      drawWorkbench();
+    } else {
+      showToast('⚠️ 파란색 점선 영역 가까이에 놓아주세요!', '#f97316');
+    }
+    dragTool = null;
+  });
+});
+
+// Phase transitions
+document.getElementById('startSimBtn').addEventListener('click', () => {
+  document.getElementById('setupPhase').style.display = 'none';
+  document.getElementById('simPhase').style.display = 'block';
+  document.getElementById('simPhase').classList.add('phase-fade-in');
+  updateAll();
+});
+
+document.getElementById('backToSetupBtn').addEventListener('click', () => {
+  document.getElementById('simPhase').style.display = 'none';
+  document.getElementById('setupPhase').style.display = 'flex';
+  resizeWorkbench();
+});
+
+document.getElementById('resetSetupBtn').addEventListener('click', () => {
+  placedTools = [];
+  currentSetupStep = 0;
+  document.querySelectorAll('.tool-item').forEach(el => el.classList.remove('placed'));
+  document.querySelectorAll('.check-item').forEach((el, i) => {
+    el.classList.remove('done');
+    el.querySelector('.check-icon').textContent = i + 1;
+  });
+  for (let i = 1; i <= 4; i++) {
+    const dot = document.getElementById('stepDot' + i);
+    dot.classList.remove('completed', 'active');
+    dot.textContent = i;
+    const line = document.getElementById('stepLine' + i);
+    if (line) line.classList.remove('completed');
+  }
+  document.getElementById('stepDot1').classList.add('active');
+  document.getElementById('setupInstruction').innerHTML = stepInstructions[0];
+  document.getElementById('startSimBtn').disabled = true;
+  drawWorkbench();
+});
+
+function showToast(msg, color) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.style.borderColor = color;
+  toast.style.color = color;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2200);
+}
+
+// Animate workbench drop zone pulse
+function animWorkbench() {
+  if (document.getElementById('setupPhase').style.display !== 'none' &&
+      document.getElementById('panel-sim').classList.contains('active')) {
+    drawWorkbench();
+  }
+  requestAnimationFrame(animWorkbench);
+}
+animWorkbench();
+
+// ==================== SIMULATION PHASE ====================
+const simCanvas = document.getElementById('simCanvas');
+const ctx = simCanvas.getContext('2d');
+
+document.getElementById('currentSlider').addEventListener('input', e => {
+  current = parseFloat(e.target.value);
+  document.getElementById('currentDisplay').innerHTML = current.toFixed(1) + '<span class="unit">A</span>';
+  updateAll();
+});
+document.getElementById('distSlider').addEventListener('input', e => {
+  distance = parseFloat(e.target.value) / 100;
+  document.getElementById('distDisplay').innerHTML = parseFloat(e.target.value).toFixed(1) + '<span class="unit">cm</span>';
+  updateAll();
+});
+document.getElementById('dirUp').addEventListener('click', () => {
+  direction = 1;
+  document.getElementById('dirUp').classList.add('active');
+  document.getElementById('dirDown').classList.remove('active');
+  updateAll();
+});
+document.getElementById('dirDown').addEventListener('click', () => {
+  direction = -1;
+  document.getElementById('dirDown').classList.add('active');
+  document.getElementById('dirUp').classList.remove('active');
+  updateAll();
+});
+document.querySelectorAll('.view-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    viewMode = btn.dataset.view;
+    drawSim();
+  });
+});
+document.getElementById('showFieldLines').addEventListener('change', e => { showFieldLines = e.target.checked; drawSim(); });
+document.getElementById('showCompass').addEventListener('change', e => { showCompass = e.target.checked; drawSim(); });
+document.getElementById('showVectors').addEventListener('change', e => { showVectors = e.target.checked; drawSim(); });
+document.getElementById('showGrid').addEventListener('change', e => { showGrid = e.target.checked; drawSim(); });
+document.getElementById('showEarth').addEventListener('change', e => { showEarth = e.target.checked; updateAll(); });
+
+function updateAll() {
+  const Bw = calcBwire(current, distance);
+  const Be = showEarth ? B_EARTH : 0;
+  const Bnet = Math.sqrt(Bw*Bw + Be*Be);
+  const theta = calcTheta(Bw, Be);
+  const tanT = Be > 0 ? Bw / Be : Infinity;
+  document.getElementById('bWireVal').textContent = (Bw*1e6).toFixed(1)+' μT';
+  document.getElementById('bEarthVal').textContent = (Be*1e6).toFixed(1)+' μT';
+  document.getElementById('bNetVal').textContent = (Bnet*1e6).toFixed(1)+' μT';
+  document.getElementById('thetaVal').textContent = theta.toFixed(1)+'°';
+  document.getElementById('tanVal').textContent = isFinite(tanT) ? tanT.toFixed(3) : '∞';
+  drawSim();
+}
+
+function drawSim() {
+  const W = simCanvas.width, H = simCanvas.height;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0d1117';
+  ctx.fillRect(0, 0, W, H);
+  if (showGrid) { drawGridBg(ctx, W, H); }
+  if (viewMode === 'top') drawTopView(ctx, W, H);
+  else if (viewMode === 'side') drawSideView(ctx, W, H);
+  else draw3DView(ctx, W, H);
+}
+
+function drawGridBg(c, W, H) {
+  c.strokeStyle = 'rgba(255,255,255,0.03)';
+  for (let x = 0; x < W; x += 40) { c.beginPath(); c.moveTo(x,0); c.lineTo(x,H); c.stroke(); }
+  for (let y = 0; y < H; y += 40) { c.beginPath(); c.moveTo(0,y); c.lineTo(W,y); c.stroke(); }
+}
+
+function drawTopView(c, W, H) {
+  const cx = W/2, cy = H/2;
+  const Bw = calcBwire(current, distance);
+  const Be = showEarth ? B_EARTH : 0;
+  const theta = calcTheta(Bw, Be);
+
+  if (showFieldLines && current > 0) {
+    for (let i = 1; i <= 8; i++) {
+      const r = i*30+10;
+      const alpha = Math.max(0.05, 0.35 - i*0.035);
+      c.strokeStyle = `rgba(6,182,212,${alpha})`;
+      c.lineWidth = 1.5;
+      c.beginPath(); c.arc(cx, cy, r, 0, Math.PI*2); c.stroke();
+      const numA = Math.max(4, 8-i);
+      for (let j = 0; j < numA; j++) {
+        const a = (j/numA)*Math.PI*2 + animFrame*0.02*direction;
+        const ax = cx+Math.cos(a)*r, ay = cy+Math.sin(a)*r;
+        const t = direction > 0 ? a+Math.PI/2 : a-Math.PI/2;
+        drawArrowHead(c, ax, ay, t, 6, `rgba(6,182,212,${alpha+0.1})`);
+      }
+    }
+  }
+
+  // Wire
+  const wireR = 14;
+  const grad = c.createRadialGradient(cx,cy,0,cx,cy,wireR);
+  grad.addColorStop(0,'#f97316'); grad.addColorStop(0.7,'#ea580c'); grad.addColorStop(1,'#c2410c');
+  c.fillStyle = grad;
+  c.beginPath(); c.arc(cx,cy,wireR,0,Math.PI*2); c.fill();
+  c.strokeStyle = '#fb923c'; c.lineWidth = 1; c.stroke();
+  c.fillStyle = '#fff'; c.font = 'bold 16px JetBrains Mono'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  if (direction > 0) { c.beginPath(); c.arc(cx,cy,4,0,Math.PI*2); c.fill(); }
+  else { c.lineWidth=2.5; c.strokeStyle='#fff'; c.beginPath(); c.moveTo(cx-5,cy-5); c.lineTo(cx+5,cy+5); c.moveTo(cx+5,cy-5); c.lineTo(cx-5,cy+5); c.stroke(); }
+
+  const rPx = Math.min(distance*8000, 250);
+  const sx = cx + rPx;
+  c.strokeStyle = 'rgba(249,115,22,0.5)'; c.lineWidth=1; c.setLineDash([4,4]);
+  c.beginPath(); c.moveTo(cx+wireR+4,cy); c.lineTo(sx-10,cy); c.stroke(); c.setLineDash([]);
+  c.fillStyle = '#f97316'; c.font = '11px Noto Sans KR'; c.textAlign = 'center';
+  c.fillText(`r = ${(distance*100).toFixed(1)} cm`, (cx+sx)/2, cy-10);
+
+  if (showCompass) {
+    const cR = 28;
+    c.strokeStyle = 'rgba(255,255,255,0.15)'; c.lineWidth = 1.5;
+    c.beginPath(); c.arc(sx, cy, cR, 0, Math.PI*2); c.stroke();
+    const nA = -theta*Math.PI/180*direction;
+    const nL = cR-6;
+    c.strokeStyle = '#ef4444'; c.lineWidth = 3;
+    c.beginPath(); c.moveTo(sx,cy); c.lineTo(sx+Math.sin(nA)*nL, cy-Math.cos(nA)*nL); c.stroke();
+    drawArrowHead(c, sx+Math.sin(nA)*nL, cy-Math.cos(nA)*nL, -nA+Math.PI/2+Math.PI, 7, '#ef4444');
+    c.strokeStyle = 'rgba(255,255,255,0.5)'; c.lineWidth = 3;
+    c.beginPath(); c.moveTo(sx,cy); c.lineTo(sx-Math.sin(nA)*nL, cy+Math.cos(nA)*nL); c.stroke();
+    if (theta > 0.5) {
+      c.strokeStyle = 'rgba(16,185,129,0.6)'; c.lineWidth = 1.5;
+      const sA = -Math.PI/2, eA = sA + theta*Math.PI/180*direction;
+      c.beginPath(); c.arc(sx, cy, cR+8, Math.min(sA,eA), Math.max(sA,eA)); c.stroke();
+      c.fillStyle = '#10b981'; c.font = '12px JetBrains Mono'; c.textAlign = 'left';
+      c.fillText(`θ=${theta.toFixed(1)}°`, sx+cR+14, cy-8);
+    }
+    c.fillStyle = 'rgba(255,255,255,0.25)'; c.font = '9px Noto Sans KR'; c.textAlign = 'center';
+    c.fillText('N',sx,cy-cR-5); c.fillText('S',sx,cy+cR+11);
+    c.fillText('E',sx+cR+8,cy+3); c.fillText('W',sx-cR-8,cy+3);
+  }
+
+  if (showVectors) {
+    const vs = 1.8;
+    if (showEarth) {
+      const eL = Be*1e6*vs;
+      c.strokeStyle='#3b82f6'; c.lineWidth=2.5;
+      c.beginPath(); c.moveTo(sx,cy); c.lineTo(sx,cy-eL); c.stroke();
+      drawArrowHead(c,sx,cy-eL,Math.PI,8,'#3b82f6');
+      c.fillStyle='#3b82f6'; c.font='10px JetBrains Mono'; c.textAlign='right';
+      c.fillText('B_earth',sx-8,cy-eL/2);
+    }
+    if (current > 0) {
+      const wL = Bw*1e6*vs;
+      c.strokeStyle='#f97316'; c.lineWidth=2.5;
+      c.beginPath(); c.moveTo(sx,cy); c.lineTo(sx,cy+wL*direction); c.stroke();
+      drawArrowHead(c,sx,cy+wL*direction,direction>0?Math.PI*1.5:Math.PI/2,8,'#f97316');
+      c.fillStyle='#f97316'; c.font='10px JetBrains Mono'; c.textAlign='left';
+      c.fillText('B_wire',sx+8,cy+wL*direction/2);
+    }
+  }
+  c.fillStyle='rgba(255,255,255,0.4)'; c.font='11px Noto Sans KR'; c.textAlign='left';
+  c.fillText('▲ 위에서 본 모습 (Top View)',16,24);
+}
+
+function drawSideView(c, W, H) {
+  const cx=W/2, cy=H/2;
+  const wG = c.createLinearGradient(cx-8,0,cx+8,0);
+  wG.addColorStop(0,'#c2410c'); wG.addColorStop(0.5,'#f97316'); wG.addColorStop(1,'#c2410c');
+  c.fillStyle=wG; c.fillRect(cx-8,40,16,H-80);
+  c.strokeStyle='#fff'; c.lineWidth=2;
+  const aY = direction>0?cy-60:cy+60, aE = direction>0?cy-120:cy+120;
+  c.beginPath(); c.moveTo(cx,aY); c.lineTo(cx,aE); c.stroke();
+  drawArrowHead(c,cx,aE,direction>0?Math.PI:0,10,'#fff');
+  c.fillStyle='#fff'; c.font='bold 14px JetBrains Mono'; c.textAlign='left'; c.fillText('I',cx+14,(aY+aE)/2+4);
+
+  if (showFieldLines && current>0) {
+    for (let i=1;i<=6;i++) {
+      const r=i*35, al=Math.max(0.05,0.3-i*0.04);
+      c.fillStyle=`rgba(6,182,212,${al+0.15})`;
+      if (direction>0) {
+        c.beginPath(); c.arc(cx-r,cy,3,0,Math.PI*2); c.fill();
+        c.strokeStyle=`rgba(6,182,212,${al+0.15})`; c.lineWidth=1.5;
+        const s=4; c.beginPath(); c.moveTo(cx+r-s,cy-s); c.lineTo(cx+r+s,cy+s); c.moveTo(cx+r+s,cy-s); c.lineTo(cx+r-s,cy+s); c.stroke();
+      } else {
+        c.beginPath(); c.arc(cx+r,cy,3,0,Math.PI*2); c.fill();
+        c.strokeStyle=`rgba(6,182,212,${al+0.15})`; c.lineWidth=1.5;
+        const s=4; c.beginPath(); c.moveTo(cx-r-s,cy-s); c.lineTo(cx-r+s,cy+s); c.moveTo(cx-r+s,cy-s); c.lineTo(cx-r-s,cy+s); c.stroke();
+      }
+    }
+  }
+  const rP=Math.min(distance*8000,200);
+  c.strokeStyle='rgba(249,115,22,0.5)'; c.lineWidth=1; c.setLineDash([4,4]);
+  c.beginPath(); c.moveTo(cx+12,cy+80); c.lineTo(cx+rP,cy+80); c.stroke(); c.setLineDash([]);
+  c.fillStyle='#f97316'; c.font='11px JetBrains Mono'; c.textAlign='center';
+  c.fillText(`r = ${(distance*100).toFixed(1)} cm`,cx+rP/2,cy+95);
+  c.fillStyle='rgba(255,255,255,0.4)'; c.font='11px Noto Sans KR'; c.textAlign='left';
+  c.fillText('▲ 옆에서 본 모습 (Side View)',16,24);
+}
+
+function draw3DView(c, W, H) {
+  const cx=W/2, cy=H/2;
+  c.save(); c.translate(cx,cy);
+  c.strokeStyle='rgba(255,255,255,0.04)'; c.lineWidth=0.5;
+  for(let i=-6;i<=6;i++){c.beginPath();c.moveTo(i*40,120);c.lineTo(i*40-80,240);c.stroke();}
+  for(let j=0;j<=4;j++){c.beginPath();c.moveTo(-280,120+j*30);c.lineTo(280,120+j*30);c.stroke();}
+  const wG=c.createLinearGradient(-6,0,6,0);
+  wG.addColorStop(0,'#c2410c');wG.addColorStop(0.5,'#f97316');wG.addColorStop(1,'#c2410c');
+  c.fillStyle=wG; c.fillRect(-6,-240,12,380);
+  c.strokeStyle='#fff'; c.lineWidth=2; c.beginPath();
+  if(direction>0){c.moveTo(0,20);c.lineTo(0,-80);c.stroke();drawArrowHead(c,0,-80,Math.PI,9,'#fff');}
+  else{c.moveTo(0,-80);c.lineTo(0,20);c.stroke();drawArrowHead(c,0,20,0,9,'#fff');}
+  c.fillStyle='#fff'; c.font='bold 16px JetBrains Mono'; c.textAlign='left'; c.fillText('I',14,-30);
+
+  if(showFieldLines&&current>0){
+    for(let ring=1;ring<=6;ring++){
+      const r=ring*35, al=Math.max(0.05,0.3-ring*0.04);
+      c.strokeStyle=`rgba(6,182,212,${al})`; c.lineWidth=1.5;
+      c.beginPath(); c.ellipse(0,0,r,r*0.35,0,0,Math.PI*2); c.stroke();
+      const nA=Math.max(3,6-ring);
+      for(let a=0;a<nA;a++){
+        const ang=(a/nA)*Math.PI*2+animFrame*0.02*direction;
+        const ax=Math.cos(ang)*r, ay=Math.sin(ang)*r*0.35;
+        const t=direction>0?ang+Math.PI/2:ang-Math.PI/2;
+        const tx=-Math.sin(t)*5, ty=Math.cos(t)*5*0.35;
+        c.fillStyle=`rgba(6,182,212,${al+0.15})`;
+        c.beginPath(); c.moveTo(ax,ay); c.lineTo(ax-tx-ty*0.5,ay-ty+tx*0.5); c.lineTo(ax+tx-ty*0.5,ay+ty+tx*0.5); c.fill();
+      }
+    }
+  }
+  c.restore();
+  c.fillStyle='rgba(255,255,255,0.4)'; c.font='11px Noto Sans KR'; c.textAlign='left';
+  c.fillText('▲ 3D 투시도 (Perspective View)',16,24);
+}
+
+function drawArrowHead(c,x,y,angle,size,color){
+  c.save(); c.translate(x,y); c.rotate(angle-Math.PI/2);
+  c.fillStyle=color; c.beginPath(); c.moveTo(0,-size); c.lineTo(-size*0.5,0); c.lineTo(size*0.5,0); c.closePath(); c.fill(); c.restore();
+}
+
+// ==================== VECTOR CANVAS ====================
+const vecCanvas = document.getElementById('vectorCanvas');
+const vctx = vecCanvas.getContext('2d');
+document.getElementById('vecCurrentSlider').addEventListener('input', e => {
+  document.getElementById('vecCurrentDisplay').innerHTML = parseFloat(e.target.value).toFixed(1)+'<span class="unit">A</span>';
+  drawVector();
+});
+
+function drawVector() {
+  const W=vecCanvas.width, H=vecCanvas.height;
+  vctx.clearRect(0,0,W,H); vctx.fillStyle='#0d1117'; vctx.fillRect(0,0,W,H);
+  const I=parseFloat(document.getElementById('vecCurrentSlider').value);
+  const Bw=calcBwire(I,0.01), Be=B_EARTH, Bnet=Math.sqrt(Bw*Bw+Be*Be), theta=calcTheta(Bw,Be);
+  document.getElementById('vecBwire').textContent=(Bw*1e6).toFixed(1)+' μT';
+  document.getElementById('vecBearth').textContent=(Be*1e6).toFixed(1)+' μT';
+  document.getElementById('vecBnet').textContent=(Bnet*1e6).toFixed(1)+' μT';
+  document.getElementById('vecTheta').textContent=theta.toFixed(1)+'°';
+
+  const ox=160, oy=360, sc=3.2;
+  vctx.strokeStyle='rgba(255,255,255,0.04)'; vctx.lineWidth=0.5;
+  for(let x=0;x<W;x+=30){vctx.beginPath();vctx.moveTo(x,0);vctx.lineTo(x,H);vctx.stroke();}
+  for(let y=0;y<H;y+=30){vctx.beginPath();vctx.moveTo(0,y);vctx.lineTo(W,y);vctx.stroke();}
+  vctx.strokeStyle='rgba(255,255,255,0.12)'; vctx.lineWidth=1;
+  vctx.beginPath();vctx.moveTo(ox,30);vctx.lineTo(ox,H-30);vctx.stroke();
+  vctx.beginPath();vctx.moveTo(30,oy);vctx.lineTo(W-30,oy);vctx.stroke();
+  vctx.fillStyle='rgba(255,255,255,0.3)'; vctx.font='11px Noto Sans KR'; vctx.textAlign='center';
+  vctx.fillText('북(N)',ox,22); vctx.fillText('남(S)',ox,H-10);
+  vctx.textAlign='left'; vctx.fillText('동(E)',W-45,oy-8);
+  vctx.textAlign='right'; vctx.fillText('서(W)',50,oy-8);
+
+  const eL=Be*1e6*sc, wL=Bw*1e6*sc;
+  vctx.strokeStyle='#3b82f6'; vctx.lineWidth=4;
+  vctx.beginPath(); vctx.moveTo(ox,oy); vctx.lineTo(ox,oy-eL); vctx.stroke();
+  drawArrowHead(vctx,ox,oy-eL,Math.PI,12,'#3b82f6');
+  vctx.fillStyle='#3b82f6'; vctx.font='bold 13px JetBrains Mono'; vctx.textAlign='right';
+  vctx.fillText('B_earth',ox-10,oy-eL/2);
+
+  if(I>0){
+    vctx.strokeStyle='#f97316'; vctx.lineWidth=4;
+    vctx.beginPath(); vctx.moveTo(ox,oy); vctx.lineTo(ox+wL,oy); vctx.stroke();
+    drawArrowHead(vctx,ox+wL,oy,Math.PI/2,12,'#f97316');
+    vctx.fillStyle='#f97316'; vctx.font='bold 13px JetBrains Mono'; vctx.textAlign='center';
+    vctx.fillText('B_wire',ox+wL/2,oy+22);
+
+    vctx.strokeStyle='rgba(255,255,255,0.1)'; vctx.lineWidth=1; vctx.setLineDash([4,4]);
+    vctx.beginPath(); vctx.moveTo(ox+wL,oy); vctx.lineTo(ox+wL,oy-eL); vctx.stroke();
+    vctx.beginPath(); vctx.moveTo(ox,oy-eL); vctx.lineTo(ox+wL,oy-eL); vctx.stroke();
+    vctx.setLineDash([]);
+
+    vctx.strokeStyle='#10b981'; vctx.lineWidth=4;
+    vctx.beginPath(); vctx.moveTo(ox,oy); vctx.lineTo(ox+wL,oy-eL); vctx.stroke();
+    drawArrowHead(vctx,ox+wL,oy-eL,Math.atan2(-eL,wL)+Math.PI/2,12,'#10b981');
+    vctx.fillStyle='#10b981'; vctx.font='bold 13px JetBrains Mono'; vctx.textAlign='left';
+    vctx.fillText('B_net',ox+wL/2+16,oy-eL/2-8);
+
+    vctx.strokeStyle='rgba(168,85,247,0.7)'; vctx.lineWidth=2;
+    vctx.beginPath(); vctx.arc(ox,oy,45,-Math.PI/2,-Math.PI/2+theta*Math.PI/180); vctx.stroke();
+    vctx.fillStyle='#a855f7'; vctx.font='bold 15px JetBrains Mono'; vctx.textAlign='left';
+    const la=-Math.PI/2+theta*Math.PI/360;
+    vctx.fillText(`θ = ${theta.toFixed(1)}°`,ox+Math.cos(la)*65,oy+Math.sin(la)*65);
+  }
+  vctx.fillStyle='rgba(168,85,247,0.6)'; vctx.font='12px JetBrains Mono'; vctx.textAlign='right';
+  vctx.fillText(`tanθ = ${I>0?(Bw/Be).toFixed(3):'0.000'}`,W-16,H-16);
+}
+
+// ==================== DATA LAB ====================
+let experimentData = [];
+function generateData() {
+  experimentData = [];
+  [0.5,1.0,1.5,2.0,2.5].forEach(I => {
+    const Bt = calcBwire(I, 0.01);
+    const tT = calcTheta(Bt, B_EARTH);
+    const noise = (Math.random()-0.5)*3;
+    const tM = Math.max(1, tT + noise);
+    const tanT = Math.tan(tM*Math.PI/180);
+    experimentData.push({ I, Btheory: Bt*1e6, theta: tM, tanTheta: tanT, invTan: 1/tanT });
+  });
+  const tbody = document.getElementById('dataTableBody');
+  tbody.innerHTML = '';
+  experimentData.forEach(d => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${d.I.toFixed(1)}</td><td>${d.Btheory.toFixed(1)}</td><td>${d.theta.toFixed(1)}</td><td>${d.tanTheta.toFixed(3)}</td><td>${d.invTan.toFixed(3)}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+document.getElementById('addNoiseBtn').addEventListener('click', () => { generateData(); drawGraph(); });
+
+function drawGraph() {
+  const canvas=document.getElementById('graphCanvas'), c=canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  c.clearRect(0,0,W,H); c.fillStyle='#0d1117'; c.fillRect(0,0,W,H);
+  if(!experimentData.length) generateData();
+  const pad={top:55,right:50,bottom:60,left:70}, gW=W-pad.left-pad.right, gH=H-pad.top-pad.bottom;
+  const xMax=3, yMax=Math.max(6,...experimentData.map(d=>d.invTan))*1.2;
+  const toX=v=>pad.left+(v/xMax)*gW, toY=v=>pad.top+gH-(v/yMax)*gH;
+
+  c.strokeStyle='rgba(255,255,255,0.05)'; c.lineWidth=0.5;
+  for(let x=0;x<=xMax;x+=0.5){const px=toX(x);c.beginPath();c.moveTo(px,pad.top);c.lineTo(px,pad.top+gH);c.stroke();}
+  for(let y=0;y<=yMax;y+=1){const py=toY(y);c.beginPath();c.moveTo(pad.left,py);c.lineTo(pad.left+gW,py);c.stroke();}
+  c.strokeStyle='rgba(255,255,255,0.3)'; c.lineWidth=1.5;
+  c.beginPath(); c.moveTo(pad.left,pad.top); c.lineTo(pad.left,pad.top+gH); c.lineTo(pad.left+gW,pad.top+gH); c.stroke();
+  c.fillStyle='#94a3b8'; c.font='12px Noto Sans KR'; c.textAlign='center';
+  c.fillText('전류 I (A)',W/2,H-12);
+  c.save(); c.translate(18,H/2); c.rotate(-Math.PI/2); c.fillText('1/tanθ',0,0); c.restore();
+  c.font='10px JetBrains Mono'; c.fillStyle='#64748b'; c.textAlign='center';
+  for(let x=0;x<=xMax;x+=0.5) c.fillText(x.toFixed(1),toX(x),pad.top+gH+18);
+  c.textAlign='right';
+  for(let y=0;y<=yMax;y+=1) c.fillText(y.toFixed(0),pad.left-8,toY(y)+4);
+
+  let sX=0,sY=0,sXY=0,sXX=0,n=experimentData.length;
+  experimentData.forEach(d=>{sX+=d.I;sY+=d.invTan;sXY+=d.I*d.invTan;sXX+=d.I*d.I;});
+  const slope=(n*sXY-sX*sY)/(n*sXX-sX*sX), intercept=(sY-slope*sX)/n;
+  const yMean=sY/n; let ssTot=0,ssRes=0;
+  experimentData.forEach(d=>{ssTot+=(d.invTan-yMean)**2;ssRes+=(d.invTan-(slope*d.I+intercept))**2;});
+  const r2=1-ssRes/ssTot;
+
+  c.strokeStyle='rgba(6,182,212,0.6)'; c.lineWidth=2; c.setLineDash([8,4]);
+  c.beginPath(); c.moveTo(toX(0),toY(intercept)); c.lineTo(toX(xMax),toY(slope*xMax+intercept)); c.stroke(); c.setLineDash([]);
+
+  experimentData.forEach(d=>{
+    const px=toX(d.I), py=toY(d.invTan);
+    const glow=c.createRadialGradient(px,py,0,px,py,12);
+    glow.addColorStop(0,'rgba(249,115,22,0.3)'); glow.addColorStop(1,'transparent');
+    c.fillStyle=glow; c.fillRect(px-12,py-12,24,24);
+    c.fillStyle='#f97316'; c.beginPath(); c.arc(px,py,5,0,Math.PI*2); c.fill();
+    c.strokeStyle='#fff'; c.lineWidth=1.5; c.stroke();
+  });
+
+  const bx=pad.left+gW-200, by=pad.top+8;
+  c.fillStyle='rgba(17,24,39,0.9)'; c.strokeStyle='rgba(6,182,212,0.3)'; c.lineWidth=1;
+  roundRectPath(c,bx,by,190,82,8); c.fill(); c.stroke();
+  c.fillStyle='#06b6d4'; c.font='bold 10px JetBrains Mono'; c.textAlign='left';
+  c.fillText('Linear Regression',bx+10,by+18);
+  c.fillStyle='#94a3b8'; c.font='11px JetBrains Mono';
+  c.fillText(`slope = ${slope.toFixed(3)}`,bx+10,by+38);
+  c.fillText(`intercept = ${intercept.toFixed(3)}`,bx+10,by+54);
+  c.fillStyle='#10b981'; c.fillText(`R² = ${r2.toFixed(4)}`,bx+10,by+70);
+  c.fillStyle='rgba(255,255,255,0.6)'; c.font='bold 13px Noto Sans KR'; c.textAlign='center';
+  c.fillText('1/tanθ vs I 그래프 — 지구자기장 역산',W/2,28);
+}
+
+function roundRectPath(c,x,y,w,h,r){
+  c.beginPath(); c.moveTo(x+r,y); c.lineTo(x+w-r,y); c.quadraticCurveTo(x+w,y,x+w,y+r);
+  c.lineTo(x+w,y+h-r); c.quadraticCurveTo(x+w,y+h,x+w-r,y+h); c.lineTo(x+r,y+h);
+  c.quadraticCurveTo(x,y+h,x,y+h-r); c.lineTo(x,y+r); c.quadraticCurveTo(x,y,x+r,y); c.closePath();
+}
+
+// ==================== ANIMATION ====================
+function animate() {
+  animFrame++;
+  if (document.getElementById('simPhase').style.display !== 'none' &&
+      document.getElementById('panel-sim').classList.contains('active')) {
+    drawSim();
+  }
+  requestAnimationFrame(animate);
+}
+
+// ==================== INIT ====================
+updateAll();
+drawVector();
+generateData();
+drawGraph();
+animate();
+setTimeout(resizeWorkbench, 200);
+</script>
+</body>
+</html>

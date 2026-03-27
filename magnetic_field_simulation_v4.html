@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>직선 도선이 만드는 자기장 - 인터랙티브 시뮬레이션</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --dk-bg: #0a0e1a; --dk-bg2: #111827; --dk-card: #1a2235; --dk-card2: #1f2a40;
+  --dk-border: #1e293b; --dk-text: #f1f5f9; --dk-text2: #94a3b8; --dk-dim: #64748b;
+  --lt-bg: #f8fafc; --lt-bg2: #ffffff; --lt-card: #ffffff; --lt-card2: #f1f5f9;
+  --lt-border: #e2e8f0; --lt-border2: #cbd5e1; --lt-text: #1e293b; --lt-text2: #475569; --lt-dim: #94a3b8;
+  --cyan: #06b6d4; --orange: #f97316; --green: #10b981; --red: #ef4444; --purple: #a855f7; --yellow: #eab308; --blue: #3b82f6;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--dk-bg);color:var(--dk-text);min-height:100vh;overflow-x:hidden;user-select:none;}
+
+/* ===== HEADER ===== */
+.header{background:linear-gradient(135deg,#0f172a,#1e1b4b,#0f172a);border-bottom:1px solid var(--dk-border);padding:16px 28px;position:relative;}
+.header::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%,rgba(6,182,212,.08),transparent 60%),radial-gradient(ellipse at 70% 50%,rgba(249,115,22,.06),transparent 60%);pointer-events:none;}
+.header-inner{position:relative;display:flex;align-items:center;justify-content:space-between;max-width:1600px;margin:0 auto;}
+.header h1{font-size:20px;font-weight:900;background:linear-gradient(135deg,var(--cyan),#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.header .sub{font-size:11px;color:var(--dk-dim);margin-top:2px;letter-spacing:1px;}
+.badge{background:rgba(6,182,212,.15);border:1px solid rgba(6,182,212,.3);color:var(--cyan);padding:4px 12px;border-radius:20px;font-size:11px;font-weight:500;}
+
+/* ===== TABS ===== */
+.tabs{display:flex;background:var(--dk-bg2);border-bottom:1px solid var(--dk-border);padding:0 28px;max-width:1600px;margin:0 auto;}
+.tab{padding:13px 22px;border:none;background:none;color:var(--dk-dim);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;position:relative;transition:color .3s;white-space:nowrap;}
+.tab:hover{color:var(--dk-text2);}
+.tab.on{color:var(--cyan);}
+.tab.on::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--cyan);border-radius:2px 2px 0 0;}
+
+.wrap{max-width:1600px;margin:0 auto;padding:20px 28px;}
+.panel{display:none;} .panel.on{display:block;}
+
+/* ============================================================
+   SETUP PHASE — LIGHT / WHITE TONE
+   ============================================================ */
+.setup-shell{display:flex;flex-direction:column;gap:14px;}
+
+.setup-bar{display:flex;align-items:center;justify-content:space-between;background:var(--lt-card);border:1px solid var(--lt-border);border-radius:14px;padding:14px 20px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.steps{display:flex;align-items:center;gap:6px;}
+.sdot{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;border:2px solid var(--lt-border2);color:var(--lt-dim);background:#fff;transition:all .35s;}
+.sdot.now{border-color:var(--cyan);color:var(--cyan);background:rgba(6,182,212,.08);box-shadow:0 0 10px rgba(6,182,212,.18);}
+.sdot.ok{border-color:var(--green);color:#fff;background:var(--green);}
+.sline{width:28px;height:2px;background:var(--lt-border);transition:background .35s;border-radius:1px;}
+.sline.ok{background:var(--green);}
+.setup-msg{font-size:13px;font-weight:500;color:var(--lt-text);margin-left:14px;}
+.setup-msg .en{font-size:11px;color:var(--lt-dim);margin-left:6px;}
+
+.pbtn{padding:10px 22px;border-radius:9px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;border:none;}
+.pbtn.go{background:var(--cyan);color:#fff;}
+.pbtn.go:hover{background:#0891b2;box-shadow:0 4px 14px rgba(6,182,212,.25);}
+.pbtn.go:disabled{background:var(--lt-border);color:var(--lt-dim);cursor:not-allowed;box-shadow:none;}
+.pbtn.rst{background:rgba(249,115,22,.08);color:var(--orange);border:1px solid rgba(249,115,22,.25);}
+.pbtn.rst:hover{background:rgba(249,115,22,.15);}
+
+.setup-body{display:grid;grid-template-columns:240px 1fr 260px;gap:14px;min-height:580px;}
+
+/* Toolbox */
+.toolbox{background:var(--lt-card);border:1px solid var(--lt-border);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:8px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.toolbox-hd{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--lt-dim);margin-bottom:4px;}
+.titem{display:flex;align-items:center;gap:10px;padding:11px 12px;background:var(--lt-bg);border:1.5px solid var(--lt-border);border-radius:10px;cursor:grab;transition:all .2s;}
+.titem:active{cursor:grabbing;}
+.titem:hover{border-color:var(--cyan);background:#f0fdfa;transform:translateX(3px);}
+.titem.done{border-color:var(--green);background:rgba(16,185,129,.06);opacity:.45;pointer-events:none;}
+.ticon{width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.tname{font-size:13px;font-weight:600;color:var(--lt-text);}
+.tdesc{font-size:10px;color:var(--lt-dim);}
+
+/* Workbench */
+.bench-wrap{position:relative;background:var(--lt-card);border:1px solid var(--lt-border);border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.05);}
+.bench-wrap canvas{display:block;width:100%;height:100%;}
+
+/* Guide */
+.guide{background:var(--lt-card);border:1px solid var(--lt-border);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 1px 3px rgba(0,0,0,.04);overflow-y:auto;}
+.gcard{background:var(--lt-bg);border:1px solid var(--lt-border);border-radius:10px;padding:13px;}
+.gcard h3{font-size:11px;font-weight:700;color:var(--cyan);margin-bottom:5px;text-transform:uppercase;letter-spacing:1px;}
+.gcard p{font-size:12px;color:var(--lt-text2);line-height:1.7;}
+.gcard .fm{font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--lt-text);text-align:center;padding:8px;background:rgba(6,182,212,.06);border-radius:6px;border:1px solid rgba(6,182,212,.15);margin:8px 0;}
+.cklist{display:flex;flex-direction:column;gap:5px;}
+.ckitem{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--lt-dim);transition:color .3s;}
+.ckitem.ok{color:var(--green);font-weight:500;}
+.ckico{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--lt-border2);display:flex;align-items:center;justify-content:center;font-size:9px;transition:all .3s;flex-shrink:0;background:#fff;}
+.ckitem.ok .ckico{border-color:var(--green);background:rgba(16,185,129,.12);color:var(--green);}
+
+/* ===== Interactive Power Supply Overlay ===== */
+.psu-overlay{
+  position:absolute;bottom:0;left:0;right:0;
+  background:linear-gradient(0deg,rgba(255,255,255,.97) 0%,rgba(255,255,255,.92) 100%);
+  backdrop-filter:blur(8px);
+  border-top:1px solid var(--lt-border);
+  padding:18px 24px;
+  display:flex;align-items:center;gap:28px;
+  border-radius:0 0 14px 14px;
+  transition:transform .4s cubic-bezier(.34,1.56,.64,1),opacity .3s;
+  transform:translateY(100%);opacity:0;
+  box-shadow:0 -4px 20px rgba(0,0,0,.06);
+}
+.psu-overlay.show{transform:translateY(0);opacity:1;}
+
+.wiring-btn{
+  flex:1;padding:16px;border:2px solid var(--lt-border);border-radius:12px;
+  background:var(--lt-bg);cursor:pointer;transition:all .25s;text-align:center;
+  display:flex;flex-direction:column;gap:10px;align-items:center;
+}
+.wiring-btn:hover{border-color:var(--cyan);background:rgba(6,182,212,.04);}
+.wiring-btn.selected{border-color:var(--cyan);background:rgba(6,182,212,.08);box-shadow:0 0 16px rgba(6,182,212,.15);}
+.wb-diagram{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;flex-wrap:wrap;justify-content:center;}
+.wb-arrow{color:var(--lt-dim);font-size:14px;}
+.wb-term{padding:3px 8px;background:rgba(0,0,0,.04);border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;}
+.wb-label{font-size:12px;font-weight:600;color:var(--lt-text);}
+
+.psu-device{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  background:var(--lt-bg);border:2px solid var(--purple);border-radius:12px;padding:14px 20px;min-width:180px;
+}
+.psu-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--purple);}
+.psu-screen{
+  font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:600;color:var(--purple);
+  background:#faf5ff;border:1px solid rgba(168,85,247,.2);border-radius:8px;padding:6px 16px;min-width:120px;text-align:center;
+}
+.psu-knob-wrap{display:flex;align-items:center;gap:8px;width:100%;}
+.psu-knob-wrap input[type="range"]{flex:1;-webkit-appearance:none;height:6px;background:rgba(168,85,247,.15);border-radius:3px;outline:none;}
+.psu-knob-wrap input::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--purple);box-shadow:0 0 8px rgba(168,85,247,.3);cursor:pointer;}
+.psu-knob-label{font-size:10px;color:var(--lt-dim);white-space:nowrap;}
+
+.ammeter-device{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  background:var(--lt-bg);border:2px solid var(--yellow);border-radius:12px;padding:14px 20px;min-width:180px;
+}
+.ammeter-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#a16207;}
+.ammeter-screen{
+  font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:600;color:#a16207;
+  background:#fefce8;border:1px solid rgba(234,179,8,.25);border-radius:8px;padding:6px 16px;min-width:120px;text-align:center;
+  transition:color .15s;
+}
+.ammeter-needle{width:100%;height:60px;position:relative;}
+
+.psu-info{display:flex;flex-direction:column;gap:4px;flex:1;}
+.psu-info p{font-size:12px;color:var(--lt-text2);line-height:1.6;}
+.psu-info .highlight{color:var(--cyan);font-weight:600;}
+
+/* ============================================================
+   SIMULATION PHASE — DARK TONE (unchanged concept)
+   ============================================================ */
+.sim-grid{display:grid;grid-template-columns:290px 1fr 270px;gap:14px;min-height:560px;}
+.cpanel{background:var(--dk-card);border:1px solid var(--dk-border);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;}
+.cg{display:flex;flex-direction:column;gap:5px;}
+.clbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--dk-dim);}
+.cval{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:600;color:var(--cyan);line-height:1;}
+.cval .u{font-size:12px;color:var(--dk-dim);margin-left:3px;}
+input[type="range"]{-webkit-appearance:none;width:100%;height:5px;background:var(--dk-border);border-radius:3px;outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px rgba(6,182,212,.3);cursor:pointer;}
+input[type="range"].org::-webkit-slider-thumb{background:var(--orange);box-shadow:0 0 10px rgba(249,115,22,.3);}
+.dtoggle{display:flex;gap:5px;}
+.dbtn{flex:1;padding:8px;border:1px solid var(--dk-border);border-radius:7px;background:var(--dk-bg2);color:var(--dk-text2);font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;text-align:center;transition:all .2s;}
+.dbtn.on{border-color:var(--orange);background:rgba(249,115,22,.1);color:var(--orange);}
+.divider{height:1px;background:var(--dk-border);}
+.carea{background:var(--dk-card);border:1px solid var(--dk-border);border-radius:12px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+.carea canvas{display:block;}
+.ipanel{background:var(--dk-card);border:1px solid var(--dk-border);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;}
+.icard{background:var(--dk-bg2);border:1px solid var(--dk-border);border-radius:8px;padding:12px;}
+.icard h3{font-size:10px;font-weight:700;color:var(--cyan);margin-bottom:5px;text-transform:uppercase;letter-spacing:1px;}
+.icard .fm{font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--dk-text);text-align:center;padding:7px;background:rgba(6,182,212,.05);border-radius:6px;border:1px solid rgba(6,182,212,.15);margin-bottom:5px;}
+.icard p{font-size:11px;color:var(--dk-text2);line-height:1.7;}
+.cvs{display:flex;flex-direction:column;gap:5px;}
+.crow{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--dk-border);}
+.crow:last-child{border:none;}
+.crow .l{font-size:11px;color:var(--dk-text2);}
+.crow .v{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:var(--green);}
+.vmodes{display:flex;gap:4px;}
+.vbtn{flex:1;padding:7px 4px;border:1px solid var(--dk-border);border-radius:6px;background:var(--dk-bg2);color:var(--dk-dim);font-family:inherit;font-size:11px;cursor:pointer;text-align:center;transition:all .2s;}
+.vbtn.on{border-color:var(--purple);background:rgba(168,85,247,.1);color:var(--purple);}
+.cbg{display:flex;flex-direction:column;gap:4px;}
+.cbi{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:var(--dk-text2);}
+.cbi input{accent-color:var(--cyan);width:13px;height:13px;}
+
+/* Vector / Data / Intent tabs (dark) */
+.vec-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.dat-grid{display:grid;grid-template-columns:370px 1fr;gap:14px;}
+.dtable{width:100%;border-collapse:collapse;font-size:12px;}
+.dtable th{background:var(--dk-bg2);color:var(--cyan);font-weight:600;padding:8px;text-align:center;font-size:10px;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid var(--cyan);}
+.dtable td{padding:7px 8px;text-align:center;border-bottom:1px solid var(--dk-border);font-family:'JetBrains Mono',monospace;font-size:11px;}
+.int-wrap{max-width:880px;margin:0 auto;display:flex;flex-direction:column;gap:18px;}
+.int-card{background:var(--dk-card);border:1px solid var(--dk-border);border-radius:12px;padding:22px;}
+.int-card h2{font-size:16px;font-weight:700;color:var(--cyan);margin-bottom:12px;display:flex;align-items:center;gap:9px;}
+.int-card h2 .n{width:24px;height:24px;background:rgba(6,182,212,.15);border:1px solid rgba(6,182,212,.3);border-radius:7px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;}
+.int-card p,.int-card li{font-size:13px;color:var(--dk-text2);line-height:1.9;}
+.int-card ul{list-style:none;padding:0;display:flex;flex-direction:column;gap:6px;}
+.int-card li::before{content:'▸';color:var(--orange);margin-right:7px;}
+.eng{color:var(--cyan);font-weight:600;font-size:11px;}
+
+/* Toast */
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(100px);padding:11px 26px;border-radius:10px;font-size:13px;font-weight:600;z-index:999;transition:transform .4s cubic-bezier(.34,1.56,.64,1);pointer-events:none;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.toast.ok{background:#ecfdf5;border:1px solid var(--green);color:var(--green);box-shadow:0 6px 24px rgba(16,185,129,.15);}
+.toast.warn{background:#fff7ed;border:1px solid var(--orange);color:var(--orange);box-shadow:0 6px 24px rgba(249,115,22,.15);}
+.toast.info{background:#eff6ff;border:1px solid var(--blue);color:var(--blue);box-shadow:0 6px 24px rgba(59,130,246,.15);}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.fadein{animation:fadeIn .45s ease forwards;}
+
+@media(max-width:1200px){.setup-body,.sim-grid{grid-template-columns:1fr;}.vec-grid,.dat-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<div class="header"><div class="header-inner">
+  <div><h1>직선 도선이 만드는 자기장 시뮬레이션</h1><div class="sub">MAGNETIC FIELD OF A STRAIGHT CURRENT-CARRYING WIRE — INTERACTIVE LAB</div></div>
+  <div class="badge">Ampère's Law Simulation</div>
+</div></div>
+
+<div class="tabs">
+  <button class="tab on" data-t="sim">실험 시뮬레이션</button>
+  <button class="tab" data-t="vec">벡터 합성</button>
+  <button class="tab" data-t="dat">데이터 분석</button>
+  <button class="tab" data-t="int">제작 의도</button>
+</div>
+
+<div class="wrap">
+<!-- ===================== TAB 1 ===================== -->
+<div class="panel on" id="p-sim">
+
+<!-- SETUP PHASE -->
+<div id="setupPhase" class="setup-shell">
+  <div class="setup-bar">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="steps">
+        <div class="sdot now" id="sd1">1</div><div class="sline" id="sl1"></div>
+        <div class="sdot" id="sd2">2</div><div class="sline" id="sl2"></div>
+        <div class="sdot" id="sd3">3</div><div class="sline" id="sl3"></div>
+        <div class="sdot" id="sd4">4</div><div class="sline" id="sl4"></div>
+        <div class="sdot" id="sd5">5</div><div class="sline" id="sl5"></div>
+        <div class="sdot" id="sd6">6</div>
+      </div>
+      <div class="setup-msg" id="smsg">모눈종이를 작업대 중앙에 놓으세요 <span class="en">Place the grid paper</span></div>
+    </div>
+    <div style="display:flex;gap:7px;">
+      <button class="pbtn rst" id="resetBtn">초기화</button>
+      <button class="pbtn go" id="startBtn" disabled>시뮬레이션 시작 →</button>
+    </div>
+  </div>
+
+  <div class="setup-body">
+    <!-- Toolbox -->
+    <div class="toolbox">
+      <div class="toolbox-hd">실험 도구함 (Toolbox)</div>
+      <div class="titem" id="t-grid" data-k="grid" draggable="true">
+        <div class="ticon" style="background:rgba(148,163,184,.08);color:#64748b;">📐</div>
+        <div><div class="tname">모눈종이</div><div class="tdesc">Grid Paper</div></div>
+      </div>
+      <div class="titem" id="t-comp" data-k="comp" draggable="true">
+        <div class="ticon" style="background:rgba(239,68,68,.06);color:var(--red);">🧭</div>
+        <div><div class="tname">나침반</div><div class="tdesc">Compass</div></div>
+      </div>
+      <div class="titem" id="t-wire" data-k="wire" draggable="true">
+        <div class="ticon" style="background:rgba(249,115,22,.06);color:var(--orange);">⚡</div>
+        <div><div class="tname">직선 도선</div><div class="tdesc">Straight Wire</div></div>
+      </div>
+      <div class="titem" id="t-psu" data-k="psu" draggable="true">
+        <div class="ticon" style="background:rgba(168,85,247,.06);color:var(--purple);">🔌</div>
+        <div><div class="tname">직류 전원장치</div><div class="tdesc">DC Power Supply</div></div>
+      </div>
+      <div class="titem" id="t-amm" data-k="amm" draggable="true">
+        <div class="ticon" style="background:rgba(234,179,8,.06);color:var(--yellow);">📊</div>
+        <div><div class="tname">전류계</div><div class="tdesc">Ammeter</div></div>
+      </div>
+    </div>
+
+    <!-- Workbench -->
+    <div class="bench-wrap" id="benchWrap">
+      <canvas id="benchCvs"></canvas>
+      <!-- Wiring overlay - polarity selection -->
+      <div class="psu-overlay" id="wiringOverlay" style="flex-direction:column;gap:14px;padding:20px 28px;">
+        <div style="display:flex;align-items:center;gap:12px;width:100%;">
+          <span style="font-size:14px;font-weight:700;color:var(--lt-text);">⑥ 전선 연결 방식 선택</span>
+          <span style="font-size:11px;color:var(--lt-dim);">Wiring Configuration — 극성에 따라 전류 방향이 결정됩니다</span>
+        </div>
+        <div style="display:flex;gap:14px;width:100%;">
+          <button class="wiring-btn" id="wiringA" onclick="selectWiring('A')">
+            <div class="wb-diagram">
+              <span class="wb-term" style="color:#ef4444;">PSU (+)</span>
+              <span class="wb-arrow">→</span>
+              <span class="wb-term" style="color:#eab308;">전류계</span>
+              <span class="wb-arrow">→</span>
+              <span class="wb-term" style="color:#f97316;">도선 (→)</span>
+              <span class="wb-arrow">→</span>
+              <span class="wb-term" style="color:#3b82f6;">PSU (−)</span>
+            </div>
+            <div class="wb-label">A: 정방향 연결 — 전류 동→서</div>
+          </button>
+          <button class="wiring-btn" id="wiringB" onclick="selectWiring('B')">
+            <div class="wb-diagram">
+              <span class="wb-term" style="color:#3b82f6;">PSU (−)</span>
+              <span class="wb-arrow">→</span>
+              <span class="wb-term" style="color:#eab308;">전류계</span>
+              <span class="wb-arrow">→</span>
+              <span class="wb-term" style="color:#f97316;">도선 (←)</span>
+              <span class="wb-arrow">→</span>
+              <span class="wb-term" style="color:#ef4444;">PSU (+)</span>
+            </div>
+            <div class="wb-label">B: 역방향 연결 — 전류 서→동</div>
+          </button>
+        </div>
+      </div>
+      <!-- Interactive PSU/Ammeter overlay -->
+      <div class="psu-overlay" id="psuOverlay">
+        <div class="psu-device">
+          <div class="psu-label">DC Power Supply</div>
+          <div class="psu-screen" id="psuScreen">0.00 V</div>
+          <div class="psu-knob-wrap">
+            <span class="psu-knob-label">0V</span>
+            <input type="range" id="psuKnob" min="0" max="5" step="0.01" value="0">
+            <span class="psu-knob-label">5V</span>
+          </div>
+        </div>
+        <div class="ammeter-device">
+          <div class="ammeter-label">Ammeter</div>
+          <div class="ammeter-screen" id="ammScreen">0.000 A</div>
+          <canvas id="ammNeedle" width="160" height="55" style="width:160px;height:55px;"></canvas>
+        </div>
+        <div class="psu-info">
+          <p><span class="highlight">전압(V)을 높이면</span> 회로에 흐르는 전류(I)가 실시간으로 변합니다.</p>
+          <p>옴의 법칙 <strong style="color:var(--purple);">V = IR</strong> (도선 저항 R ≈ 2.0 Ω 가정)</p>
+          <p style="color:var(--lt-dim);font-size:11px;margin-top:4px;">⚠ 최대 전류 2.5A 초과 시 안전 차단됩니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Guide -->
+    <div class="guide">
+      <div class="gcard">
+        <h3>실험 구성 안내</h3>
+        <p>왼쪽 도구함에서 실험 도구를 <strong>드래그하여</strong> 작업대 위 <strong style="color:var(--cyan);">파란색 점선 영역</strong>에 놓으세요.</p>
+      </div>
+      <div class="gcard">
+        <h3>배치 순서</h3>
+        <div class="cklist" id="ckList">
+          <div class="ckitem" id="ck-grid"><div class="ckico">1</div><span>모눈종이 (Grid Paper)</span></div>
+          <div class="ckitem" id="ck-comp"><div class="ckico">2</div><span>나침반 (Compass)</span></div>
+          <div class="ckitem" id="ck-wire"><div class="ckico">3</div><span>도선 (Wire)</span></div>
+          <div class="ckitem" id="ck-psu"><div class="ckico">4</div><span>전원장치 (Power Supply)</span></div>
+          <div class="ckitem" id="ck-amm"><div class="ckico">5</div><span>전류계 (Ammeter)</span></div>
+              <div class="ckitem" id="ck-wiring"><div class="ckico">6</div><span>전선 연결 (Wiring)</span></div>
+        </div>
+      </div>
+      <div class="gcard">
+        <h3>핵심 원리</h3>
+        <div class="fm">B = μ₀I / (2πr)</div>
+        <p>전류(I)에 비례, 거리(r)에 반비례하는 자기장이 도선 주위에 형성됩니다.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SIM PHASE -->
+<div id="simPhase" style="display:none;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+    <div style="display:flex;align-items:center;gap:9px;">
+      <span style="font-size:13px;font-weight:700;color:var(--green);">✓ 실험 환경 구성 완료</span>
+      <span style="font-size:11px;color:var(--dk-dim);">변인을 조작하여 실험을 수행하세요</span>
+    </div>
+    <button class="pbtn rst" id="backBtn">← 환경 재구성</button>
+  </div>
+  <div class="sim-grid">
+    <div class="cpanel">
+      <div class="cg"><div class="clbl">전류 (Current, I)</div><div class="cval" id="cDisp">1.0<span class="u">A</span></div>
+        <input type="range" id="cSlider" min="0" max="2.5" step="0.1" value="1.0">
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--dk-dim)"><span>0 A</span><span>2.5 A</span></div></div>
+      <div class="cg"><div class="clbl">거리 (Distance, r)</div><div class="cval" id="dDisp">1.0<span class="u">cm</span></div>
+        <input type="range" class="org" id="dSlider" min="0.5" max="5" step="0.1" value="1.0">
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--dk-dim)"><span>0.5 cm</span><span>5.0 cm</span></div></div>
+      <div class="divider"></div>
+      <div class="cg"><div class="clbl">전류 방향</div><div class="dtoggle"><button class="dbtn on" id="dUp">↑ 위</button><button class="dbtn" id="dDn">↓ 아래</button></div></div>
+      <div class="divider"></div>
+      <div class="cg"><div class="clbl">시점</div><div class="vmodes"><button class="vbtn on" data-v="top">위에서</button><button class="vbtn" data-v="side">옆에서</button><button class="vbtn" data-v="3d">3D</button></div></div>
+      <div class="divider"></div>
+      <div class="cg"><div class="clbl">표시 옵션</div><div class="cbg">
+        <label class="cbi"><input type="checkbox" id="oFL" checked> 자기력선</label>
+        <label class="cbi"><input type="checkbox" id="oCP" checked> 나침반</label>
+        <label class="cbi"><input type="checkbox" id="oVC" checked> 벡터 화살표</label>
+        <label class="cbi"><input type="checkbox" id="oGR"> 격자</label>
+        <label class="cbi"><input type="checkbox" id="oEB" checked> 지구자기장</label>
+      </div></div>
+    </div>
+    <div class="carea"><canvas id="simCvs" width="660" height="540"></canvas></div>
+    <div class="ipanel">
+      <div class="icard"><h3>앙페르의 법칙</h3><div class="fm">B = μ₀I / (2πr)</div><p>전류(I)에 비례, 거리(r)에 반비례</p></div>
+      <div class="icard"><h3>계산 결과</h3><div class="cvs">
+        <div class="crow"><span class="l">B<sub>도선</sub></span><span class="v" id="vBw">20.0 μT</span></div>
+        <div class="crow"><span class="l">B<sub>지구</sub></span><span class="v" id="vBe">50.6 μT</span></div>
+        <div class="crow"><span class="l">B<sub>net</sub></span><span class="v" id="vBn">54.4 μT</span></div>
+        <div class="crow"><span class="l">편향각 θ</span><span class="v" id="vTh">21.6°</span></div>
+        <div class="crow"><span class="l">tanθ</span><span class="v" id="vTn">0.396</span></div>
+      </div></div>
+      <div class="icard"><h3>오른손 법칙</h3><p>엄지→전류, 네 손가락 감아쥐는 방향→자기장</p></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ===================== TAB 2 ===================== -->
+<div class="panel" id="p-vec">
+  <div class="vec-grid">
+    <div class="carea" style="min-height:510px;"><canvas id="vecCvs" width="570" height="510"></canvas></div>
+    <div class="ipanel">
+      <div class="icard"><h3>벡터 합성 원리</h3><div class="fm">tanθ = B<sub>wire</sub> / B<sub>earth</sub></div><p>나침반은 합성 벡터 방향을 가리킵니다.</p></div>
+      <div class="cg"><div class="clbl">전류 조절</div><div class="cval" id="vcDisp">1.0<span class="u">A</span></div><input type="range" id="vcSlider" min="0" max="2.5" step="0.1" value="1.0"></div>
+      <div class="icard"><h3>벡터 성분</h3><div class="cvs">
+        <div class="crow"><span class="l">B<sub>wire</sub></span><span class="v" id="vcBw">20.0 μT</span></div>
+        <div class="crow"><span class="l">B<sub>earth</sub></span><span class="v" id="vcBe">50.6 μT</span></div>
+        <div class="crow"><span class="l">|B<sub>net</sub>|</span><span class="v" id="vcBn">54.4 μT</span></div>
+        <div class="crow"><span class="l">θ</span><span class="v" id="vcTh">21.6°</span></div>
+      </div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== TAB 3 ===================== -->
+<div class="panel" id="p-dat">
+  <div class="dat-grid">
+    <div class="cpanel">
+      <div class="icard"><h3>가상 실험 데이터</h3><p>r=1.0cm 고정, I=0.5~2.5A. 노이즈 포함.</p></div>
+      <table class="dtable"><thead><tr><th>I(A)</th><th>B<sub>th</sub>(μT)</th><th>θ(°)</th><th>tanθ</th><th>1/tanθ</th></tr></thead><tbody id="dtBody"></tbody></table>
+      <button id="noiseBtn" style="padding:8px 14px;border:1px solid var(--orange);border-radius:8px;background:rgba(249,115,22,.08);color:var(--orange);font-family:inherit;font-size:12px;cursor:pointer;">새 노이즈 데이터</button>
+    </div>
+    <div class="carea" style="min-height:500px;"><canvas id="grCvs" width="660" height="490"></canvas></div>
+  </div>
+</div>
+
+<!-- ===================== TAB 4 ===================== -->
+<div class="panel" id="p-int">
+  <div class="int-wrap">
+    <div class="int-card"><h2><span class="n">1</span>제작 배경 <span class="eng">Background</span></h2><p>2026학년도 과학아카데미 포트폴리오 「직선 도선이 만드는 자기장과 지구자기장 측정」 실험 기반. 학생들이 가상으로 실험 환경을 구성하고 변인을 조작하여 자기장 개념을 체감하도록 설계.</p></div>
+    <div class="int-card"><h2><span class="n">2</span>환경 구성 단계 <span class="eng">Setup Phase</span></h2><ul>
+      <li><strong>드래그 앤 드롭</strong>: 5종 도구를 순서대로 배치하며 실험 셋업 학습</li>
+      <li><strong>전원장치-전류계 인터랙션</strong>: 전압 조절 → 옴의 법칙(V=IR) → 전류계 실시간 반응</li>
+      <li><strong>절차 내면화</strong>: 모눈종이→나침반→도선→전원장치→전류계 순서를 자연스럽게 습득</li>
+    </ul></div>
+    <div class="int-card"><h2><span class="n">3</span>시뮬레이션 구성 <span class="eng">Components</span></h2><ul>
+      <li><strong>실험 시뮬레이션</strong>: I, r, 방향 조작. Top/Side/3D 시점</li>
+      <li><strong>벡터 합성</strong>: B_earth·B_wire 합성 다이어그램</li>
+      <li><strong>데이터 분석</strong>: 1/tanθ vs I 그래프, 선형 회귀로 B_earth 역산</li>
+    </ul></div>
+    <div class="int-card"><h2><span class="n">4</span>교육 활용 <span class="eng">Pedagogy</span></h2><ul>
+      <li><strong>사전 학습(Pre-Lab)</strong>: 환경 구성 연습 및 예상 결과 추론</li>
+      <li><strong>개념 강화</strong>: 오른손 법칙, 벡터 합성 시각적 이해</li>
+      <li><strong>데이터 리터러시</strong>: 노이즈 데이터에서 패턴 추출</li>
+    </ul></div>
+    <div class="int-card"><h2><span class="n">5</span>실험 조건 <span class="eng">Setup</span></h2><ul>
+      <li><strong>통제 변인</strong>: r = 1.0 cm</li>
+      <li><strong>조작 변인</strong>: I = 0.5 ~ 2.5 A (0.5A 단위)</li>
+      <li><strong>참값</strong>: INTERMAGNET 청양 관측소 약 50.6 μT</li>
+      <li><strong>안전</strong>: 최대 전류 2.5A 제한</li>
+    </ul></div>
+  </div>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ========== PHYSICS ========== */
+const MU0=4*Math.PI*1e-7, B_EARTH=50.6e-6, WIRE_R=2.0; // ohm
+const Bw=(I,r)=>r>0?(MU0*Math.abs(I))/(2*Math.PI*r):0;
+const theta=(bw,be)=>be>0?Math.atan2(bw,be)*180/Math.PI:90;
+
+let cur=1,dist=.01,dir=1,vm='top',oFL=true,oCP=true,oVC=true,oGR=false,oEB=true,af=0;
+
+/* ========== TABS ========== */
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  t.classList.add('on');
+  document.getElementById('p-'+t.dataset.t).classList.add('on');
+  if(t.dataset.t==='vec')drawVec();
+  if(t.dataset.t==='dat'){genData();drawGr();}
+  if(t.dataset.t==='sim')resizeBench();
+});
+
+/* ========== SETUP PHASE ========== */
+const order=['grid','comp','wire','psu','amm'];
+const labels={grid:'모눈종이',comp:'나침반',wire:'직선 도선',psu:'직류 전원장치',amm:'전류계'};
+const msgs=[
+  '모눈종이를 작업대 중앙에 놓으세요 <span class="en">Place the grid paper</span>',
+  '나침반을 모눈종이 중앙에 정렬하세요 <span class="en">Align the compass</span>',
+  '도선을 나침반 위에 수평 배치하세요 <span class="en">Place wire above compass</span>',
+  '직류 전원장치를 연결하세요 <span class="en">Connect DC power supply</span>',
+  '전류계를 직렬 연결하세요 <span class="en">Connect ammeter in series</span>'
+];
+let placed=[],step=0,dragK=null;
+
+const bc=document.getElementById('benchCvs'),bx=bc.getContext('2d');
+function resizeBench(){
+  const w=document.getElementById('benchWrap');if(!w)return;
+  const r=w.getBoundingClientRect();bc.width=r.width;bc.height=r.height;drawBench();
+}
+window.addEventListener('resize',resizeBench);
+setTimeout(resizeBench,120);
+
+function zones(){
+  const W=bc.width,H=bc.height,cx=W/2,cy=H/2-20;
+  return{
+    grid:{x:cx-120,y:cy-75,w:240,h:170},
+    comp:{x:cx-42,y:cy-30,w:84,h:84},
+    wire:{x:cx-140,y:cy-58,w:280,h:12},
+    psu:{x:W-185,y:cy-55,w:130,h:110},
+    amm:{x:W-185,y:cy+75,w:130,h:75}
+  };
+}
+
+function drawBench(){
+  const W=bc.width,H=bc.height;if(!W)return;
+  bx.clearRect(0,0,W,H);
+  // Light lab background
+  const g=bx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#f8fafc');g.addColorStop(1,'#f1f5f9');
+  bx.fillStyle=g;bx.fillRect(0,0,W,H);
+  // Subtle bench lines
+  bx.strokeStyle='rgba(0,0,0,.03)';bx.lineWidth=.5;
+  for(let y=0;y<H;y+=24){bx.beginPath();bx.moveTo(0,y);bx.lineTo(W,y);bx.stroke();}
+
+  const z=zones();
+  placed.forEach(k=>drawTool(k,z[k]));
+
+  // Active drop zone
+  if(step<order.length){
+    const zn=z[order[step]];
+    const pulse=.45+Math.sin(Date.now()/450)*.15;
+    bx.strokeStyle=`rgba(6,182,212,${pulse})`;bx.lineWidth=2;bx.setLineDash([8,5]);
+    rrp(bx,zn.x,zn.y,zn.w,zn.h,8);bx.stroke();bx.setLineDash([]);
+    bx.fillStyle=`rgba(6,182,212,${pulse})`;bx.font='12px Noto Sans KR';bx.textAlign='center';
+    bx.fillText(`여기에 ${labels[order[step]]}`,zn.x+zn.w/2,zn.y+zn.h/2+4);
+  }
+
+  // Connection wires
+  if(placed.includes('psu')||placed.includes('amm'))drawConns(z);
+
+  bx.fillStyle='rgba(0,0,0,.2)';bx.font='11px Noto Sans KR';bx.textAlign='left';
+  bx.fillText('실험 작업대 (Lab Workbench)',14,22);
+
+  if(placed.length===5){
+    bx.fillStyle='rgba(16,185,129,.75)';bx.font='bold 13px Noto Sans KR';bx.textAlign='center';
+    bx.fillText('✓ 모든 도구 배치 완료!',W/2,H-50);
+  }
+}
+
+function drawTool(k,z){
+  if(k==='grid'){
+    bx.fillStyle='rgba(220,230,240,.35)';bx.fillRect(z.x,z.y,z.w,z.h);
+    bx.strokeStyle='rgba(100,116,139,.12)';bx.lineWidth=.5;
+    for(let gx=z.x;gx<=z.x+z.w;gx+=18){bx.beginPath();bx.moveTo(gx,z.y);bx.lineTo(gx,z.y+z.h);bx.stroke();}
+    for(let gy=z.y;gy<=z.y+z.h;gy+=18){bx.beginPath();bx.moveTo(z.x,gy);bx.lineTo(z.x+z.w,gy);bx.stroke();}
+    bx.strokeStyle='rgba(100,116,139,.25)';bx.lineWidth=1;rrp(bx,z.x,z.y,z.w,z.h,4);bx.stroke();
+    bx.fillStyle='rgba(100,116,139,.45)';bx.font='9px Noto Sans KR';bx.textAlign='center';
+    bx.fillText('북(N)',z.x+z.w/2,z.y-4);bx.fillText('남(S)',z.x+z.w/2,z.y+z.h+12);
+    bx.textAlign='left';bx.fillText('서(W)',z.x-28,z.y+z.h/2+3);
+    bx.textAlign='right';bx.fillText('동(E)',z.x+z.w+28,z.y+z.h/2+3);
+  }
+  if(k==='comp'){
+    const cx=z.x+z.w/2,cy=z.y+z.h/2,cr=z.w/2-4;
+    // Compass body
+    bx.strokeStyle='rgba(120,120,140,.3)';bx.lineWidth=2;bx.beginPath();bx.arc(cx,cy,cr,0,Math.PI*2);bx.stroke();
+    bx.fillStyle='rgba(0,0,0,.02)';bx.fill();
+    // Tick marks N/S/E/W
+    bx.fillStyle='rgba(100,100,120,.25)';bx.font='7px Noto Sans KR';bx.textAlign='center';
+    bx.fillText('N',cx,z.y+4);bx.fillText('S',cx,z.y+z.h-1);
+    bx.textAlign='left';bx.fillText('E',z.x+z.w-3,cy+3);
+    bx.textAlign='right';bx.fillText('W',z.x+3,cy+3);
+    // Calculate deflection from PSU current
+    const setupI=Math.min(psuVoltage/WIRE_R,2.5);
+    const setupBw=Bw(setupI,0.01);
+    const setupTh=theta(setupBw,B_EARTH)*wirePolarity; // signed deflection
+    const needleRad=-setupTh*Math.PI/180; // rotate from north
+    const nl=cr-6;
+    // Red half (N-seeking)
+    bx.strokeStyle='#ef4444';bx.lineWidth=2.5;
+    bx.beginPath();bx.moveTo(cx,cy);
+    bx.lineTo(cx+Math.sin(needleRad)*nl,cy-Math.cos(needleRad)*nl);bx.stroke();
+    // White half (S)
+    bx.strokeStyle='rgba(100,100,120,.35)';bx.lineWidth=2.5;
+    bx.beginPath();bx.moveTo(cx,cy);
+    bx.lineTo(cx-Math.sin(needleRad)*nl,cy+Math.cos(needleRad)*nl);bx.stroke();
+    // Center pivot
+    bx.fillStyle='#64748b';bx.beginPath();bx.arc(cx,cy,3,0,Math.PI*2);bx.fill();
+    // Deflection angle label
+    if(setupI>0.01){
+      bx.fillStyle='rgba(16,185,129,.7)';bx.font='bold 9px JetBrains Mono';bx.textAlign='center';
+      bx.fillText(`θ=${Math.abs(setupTh).toFixed(1)}°`,cx,z.y+z.h+12);
+    }
+  }
+  if(k==='wire'){
+    const wy=z.y+z.h/2;
+    const wg=bx.createLinearGradient(z.x,wy-5,z.x,wy+5);
+    wg.addColorStop(0,'#c2410c');wg.addColorStop(.3,'#f97316');wg.addColorStop(.7,'#fb923c');wg.addColorStop(1,'#c2410c');
+    bx.fillStyle=wg;rrp(bx,z.x,wy-5,z.w,10,4);bx.fill();
+    // r distance bracket between wire and compass
+    const compZone=zones().comp;
+    const compTop=compZone.y;
+    const wireBot=wy+5;
+    if(placed.includes('comp')){
+      bx.strokeStyle='rgba(249,115,22,.45)';bx.lineWidth=1;bx.setLineDash([3,3]);
+      const brkX=z.x+z.w/2+55;
+      bx.beginPath();bx.moveTo(brkX,wireBot+2);bx.lineTo(brkX,compTop-2);bx.stroke();
+      bx.beginPath();bx.moveTo(brkX-4,wireBot+2);bx.lineTo(brkX+4,wireBot+2);bx.stroke();
+      bx.beginPath();bx.moveTo(brkX-4,compTop-2);bx.lineTo(brkX+4,compTop-2);bx.stroke();
+      bx.setLineDash([]);
+      bx.fillStyle='rgba(249,115,22,.7)';bx.font='10px JetBrains Mono';bx.textAlign='left';
+      bx.fillText('r=1.0cm',brkX+6,(wireBot+compTop)/2+3);
+    }else{
+      bx.fillStyle='rgba(249,115,22,.6)';bx.font='10px JetBrains Mono';bx.textAlign='center';
+      bx.fillText('r = 1.0 cm ↕',z.x+z.w/2,wy-14);
+    }
+    // Current direction arrow on wire (only when PSU connected and voltage > 0)
+    if(placed.includes('psu')&&psuVoltage>0){
+      const arrowDir=wirePolarity; // +1=left-to-right, -1=right-to-left
+      const awY=wy;
+      const awStartX=arrowDir>0?z.x+30:z.x+z.w-30;
+      const awEndX=arrowDir>0?z.x+z.w-30:z.x+30;
+      bx.strokeStyle='rgba(255,255,255,.6)';bx.lineWidth=1.5;bx.setLineDash([5,3]);
+      bx.beginPath();bx.moveTo(awStartX,awY);bx.lineTo(awEndX,awY);bx.stroke();bx.setLineDash([]);
+      // Arrow head
+      const ahx=awEndX,ahy=awY;
+      bx.fillStyle='rgba(255,255,255,.7)';
+      bx.beginPath();
+      bx.moveTo(ahx,ahy);
+      bx.lineTo(ahx-arrowDir*8,ahy-5);
+      bx.lineTo(ahx-arrowDir*8,ahy+5);
+      bx.closePath();bx.fill();
+      bx.fillStyle='rgba(255,255,255,.5)';bx.font='9px JetBrains Mono';bx.textAlign='center';
+      bx.fillText(arrowDir>0?'I →':'← I',z.x+z.w/2,wy+18);
+    }
+  }
+  if(k==='psu'){
+    bx.fillStyle='rgba(168,85,247,.05)';bx.strokeStyle='rgba(168,85,247,.35)';bx.lineWidth=1.5;
+    rrp(bx,z.x,z.y,z.w,z.h,8);bx.fill();bx.stroke();
+    bx.fillStyle='#7c3aed';bx.font='bold 11px Noto Sans KR';bx.textAlign='center';
+    bx.fillText('DC Power Supply',z.x+z.w/2,z.y+24);
+    bx.fillStyle='rgba(168,85,247,.5)';bx.font='10px JetBrains Mono';
+    bx.fillText(`${psuVoltage.toFixed(2)} V`,z.x+z.w/2,z.y+44);
+    // Knob
+    bx.fillStyle='rgba(168,85,247,.2)';bx.beginPath();bx.arc(z.x+z.w/2,z.y+68,13,0,Math.PI*2);bx.fill();
+    bx.strokeStyle='rgba(168,85,247,.4)';bx.lineWidth=2;bx.beginPath();bx.arc(z.x+z.w/2,z.y+68,13,0,Math.PI*2);bx.stroke();
+    // Knob indicator
+    const knobAngle=-Math.PI*.75+psuVoltage/5*Math.PI*1.5;
+    bx.strokeStyle='var(--purple)';bx.lineWidth=2;
+    bx.beginPath();bx.moveTo(z.x+z.w/2,z.y+68);bx.lineTo(z.x+z.w/2+Math.cos(knobAngle)*10,z.y+68+Math.sin(knobAngle)*10);bx.stroke();
+    bx.fillStyle='#ef4444';bx.font='bold 12px sans-serif';bx.fillText('+',z.x+16,z.y+z.h-6);
+    bx.fillStyle='#3b82f6';bx.fillText('−',z.x+z.w-16,z.y+z.h-6);
+  }
+  if(k==='amm'){
+    bx.fillStyle='rgba(234,179,8,.05)';bx.strokeStyle='rgba(234,179,8,.35)';bx.lineWidth=1.5;
+    rrp(bx,z.x,z.y,z.w,z.h,8);bx.fill();bx.stroke();
+    bx.fillStyle='#a16207';bx.font='bold 11px Noto Sans KR';bx.textAlign='center';
+    bx.fillText('AMMETER',z.x+z.w/2,z.y+22);
+    bx.fillStyle='rgba(0,0,0,.3)';rrp(bx,z.x+18,z.y+30,z.w-36,22,4);bx.fill();
+    bx.fillStyle='#eab308';bx.font='13px JetBrains Mono';
+    const ampVal=Math.min(psuVoltage/WIRE_R,2.5)*wirePolarity;
+    bx.fillStyle=ampVal<0?'#3b82f6':'#eab308';
+    bx.fillText(`${ampVal.toFixed(3)} A`,z.x+z.w/2,z.y+46);
+  }
+}
+
+function drawConns(z){
+  const wiringDone=document.getElementById('wiringA').classList.contains('selected')||document.getElementById('wiringB').classList.contains('selected');
+  const redColor=wiringDone?'rgba(239,68,68,.35)':'rgba(100,120,160,.18)';
+  const blueColor=wiringDone?'rgba(59,130,246,.35)':'rgba(100,120,160,.18)';
+  const defaultColor='rgba(100,120,160,.18)';
+  bx.lineWidth=2;bx.setLineDash([6,4]);
+  if(placed.includes('psu')&&placed.includes('wire')){
+    // PSU + terminal → wire right end (forward) or left end (reverse)
+    bx.strokeStyle=wiringDone?(wirePolarity>0?redColor:blueColor):defaultColor;
+    const wireEnd=wirePolarity>0?z.wire.x+z.wire.w:z.wire.x;
+    bx.beginPath();bx.moveTo(z.psu.x,z.psu.y+z.psu.h-14);bx.lineTo(wireEnd,z.wire.y+z.wire.h/2);bx.stroke();
+    if(wiringDone){
+      bx.fillStyle=wirePolarity>0?'rgba(239,68,68,.5)':'rgba(59,130,246,.5)';
+      bx.font='bold 8px JetBrains Mono';bx.textAlign='center';
+      const mx=(z.psu.x+wireEnd)/2, my=(z.psu.y+z.psu.h-14+z.wire.y+z.wire.h/2)/2;
+      bx.fillText(wirePolarity>0?'+':'−',mx,my-5);
+    }
+  }
+  if(placed.includes('amm')&&placed.includes('wire')){
+    bx.strokeStyle=wiringDone?(wirePolarity>0?blueColor:redColor):defaultColor;
+    const wireEnd=wirePolarity>0?z.wire.x:z.wire.x+z.wire.w;
+    bx.beginPath();bx.moveTo(z.amm.x,z.amm.y+20);bx.lineTo(wireEnd,z.wire.y+z.wire.h/2);bx.stroke();
+  }
+  if(placed.includes('psu')&&placed.includes('amm')){
+    bx.strokeStyle=defaultColor;
+    bx.beginPath();bx.moveTo(z.psu.x+z.psu.w/2,z.psu.y+z.psu.h);bx.lineTo(z.amm.x+z.amm.w/2,z.amm.y);bx.stroke();
+  }
+  bx.setLineDash([]);
+}
+
+/* ===== INTERACTIVE PSU / AMMETER ===== */
+let psuVoltage=0;
+let wirePolarity=1; // 1=forward(A), -1=reverse(B)
+
+function selectWiring(mode){
+  wirePolarity=mode==='A'?1:-1;
+  document.getElementById('wiringA').classList.toggle('selected',mode==='A');
+  document.getElementById('wiringB').classList.toggle('selected',mode==='B');
+  // Complete step 6
+  document.getElementById('wiringOverlay').classList.remove('show');
+  const dot6=document.getElementById('sd6');if(dot6){dot6.classList.remove('now');dot6.classList.add('ok');dot6.textContent='✓';}
+  const ln5=document.getElementById('sl5');if(ln5)ln5.classList.add('ok');
+  const ck=document.getElementById('ck-wiring');if(ck){ck.classList.add('ok');ck.querySelector('.ckico').textContent='✓';}
+  document.getElementById('smsg').innerHTML='전선 연결 완료! 전압을 올려 전류계를 확인하세요 <span class="en">Adjust voltage, then start</span>';
+  document.getElementById('startBtn').disabled=false;
+  // Show PSU overlay
+  setTimeout(()=>document.getElementById('psuOverlay').classList.add('show'),300);
+  const dirLabel=mode==='A'?'정방향 (동→서)':'역방향 (서→동)';
+  toast(`✓ ${dirLabel} 연결 완료`,'ok');
+  drawBench();
+}
+const psuKnob=document.getElementById('psuKnob');
+const psuScreen=document.getElementById('psuScreen');
+const ammScreen=document.getElementById('ammScreen');
+const ammNeedleCvs=document.getElementById('ammNeedle');
+const anx=ammNeedleCvs.getContext('2d');
+
+psuKnob.addEventListener('input',()=>{
+  psuVoltage=parseFloat(psuKnob.value);
+  updatePsuAmm();
+  drawBench(); // update on-bench displays too
+});
+
+function updatePsuAmm(){
+  const V=psuVoltage;
+  let I=V/WIRE_R;
+  const overload=I>2.5;
+  if(overload)I=2.5;
+  const signedI=I*wirePolarity;
+
+  psuScreen.textContent=V.toFixed(2)+' V';
+  ammScreen.textContent=(signedI>=0?'':'')+signedI.toFixed(3)+' A';
+  ammScreen.style.color=overload?'#ef4444':signedI<0?'#3b82f6':'#a16207';
+
+  // Draw ammeter needle
+  const W=ammNeedleCvs.width,H=ammNeedleCvs.height;
+  anx.clearRect(0,0,W,H);
+  const cx=W/2,cy=H+5,R=48;
+  // Scale arc - full range from -2.5 to +2.5
+  anx.strokeStyle='#e2e8f0';anx.lineWidth=2;
+  anx.beginPath();anx.arc(cx,cy,R,-Math.PI,0,false);anx.stroke();
+  // Center zero line
+  anx.strokeStyle='#94a3b8';anx.lineWidth=1;
+  anx.beginPath();anx.moveTo(cx,cy-R+4);anx.lineTo(cx,cy-R-4);anx.stroke();
+  // Tick marks: -2.5 to +2.5
+  for(let a=0;a<=10;a++){
+    const ang=-Math.PI+a*(Math.PI/10);
+    const x1=cx+Math.cos(ang)*(R-4),y1=cy+Math.sin(ang)*(R-4);
+    const x2=cx+Math.cos(ang)*(R+2),y2=cy+Math.sin(ang)*(R+2);
+    anx.strokeStyle=a%2===0?'#94a3b8':'#cbd5e1';anx.lineWidth=a%2===0?1.5:1;
+    anx.beginPath();anx.moveTo(x1,y1);anx.lineTo(x2,y2);anx.stroke();
+    if(a%2===0){
+      anx.fillStyle='#64748b';anx.font='8px JetBrains Mono';anx.textAlign='center';
+      const tickVal=-2.5+a*0.5;
+      anx.fillText(tickVal.toFixed(1),cx+Math.cos(ang)*(R+13),cy+Math.sin(ang)*(R+13));
+    }
+  }
+  // Needle position: map signedI from [-2.5, +2.5] to [-PI, 0]
+  const needleFrac=(signedI+2.5)/5.0; // 0 to 1
+  const needleAngle=-Math.PI+needleFrac*Math.PI;
+  anx.strokeStyle=overload?'#ef4444':signedI<0?'#3b82f6':'#a16207';anx.lineWidth=2;
+  anx.beginPath();anx.moveTo(cx,cy);anx.lineTo(cx+Math.cos(needleAngle)*(R-8),cy+Math.sin(needleAngle)*(R-8));anx.stroke();
+  anx.fillStyle='#64748b';anx.beginPath();anx.arc(cx,cy,3,0,Math.PI*2);anx.fill();
+
+  if(overload){
+    anx.fillStyle='rgba(239,68,68,.7)';anx.font='bold 9px Noto Sans KR';anx.textAlign='center';
+    anx.fillText('⚠ 과전류!',cx,12);
+  }
+}
+
+/* ===== DRAG & DROP ===== */
+document.querySelectorAll('.titem').forEach(el=>{
+  let ghost=null;
+  el.addEventListener('dragstart',e=>{
+    const k=el.dataset.k;
+    if(order[step]!==k){e.preventDefault();toast(`지금은 "${labels[order[step]]}"을(를) 먼저 배치하세요`,'warn');return;}
+    dragK=k;
+    e.dataTransfer.setDragImage(new Image(),0,0);
+    ghost=document.createElement('div');ghost.className='drag-ghost';
+    ghost.style.cssText='position:fixed;pointer-events:none;z-index:9999;padding:9px 13px;background:#fff;border:2px solid #06b6d4;border-radius:10px;display:flex;align-items:center;gap:9px;font-family:Noto Sans KR;color:#1e293b;box-shadow:0 8px 24px rgba(6,182,212,.2);opacity:.9;transform:scale(1.04);';
+    ghost.innerHTML=el.innerHTML;document.body.appendChild(ghost);
+    el._ghost=ghost;
+  });
+  el.addEventListener('drag',e=>{if(el._ghost&&e.clientX>0){el._ghost.style.left=(e.clientX-55)+'px';el._ghost.style.top=(e.clientY-22)+'px';}});
+  el.addEventListener('dragend',()=>{if(el._ghost){el._ghost.remove();el._ghost=null;}dragK=null;});
+
+  // Touch
+  let tg=null;
+  el.addEventListener('touchstart',e=>{
+    const k=el.dataset.k;
+    if(order[step]!==k){toast(`지금은 "${labels[order[step]]}"을(를) 먼저 배치하세요`,'warn');return;}
+    dragK=k;const tc=e.touches[0];
+    tg=document.createElement('div');
+    tg.style.cssText=`position:fixed;pointer-events:none;z-index:9999;padding:9px 13px;background:#fff;border:2px solid #06b6d4;border-radius:10px;display:flex;align-items:center;gap:9px;font-family:Noto Sans KR;color:#1e293b;box-shadow:0 8px 24px rgba(6,182,212,.2);left:${tc.clientX-55}px;top:${tc.clientY-22}px;`;
+    tg.innerHTML=el.innerHTML;document.body.appendChild(tg);e.preventDefault();
+  },{passive:false});
+  el.addEventListener('touchmove',e=>{if(tg){tg.style.left=(e.touches[0].clientX-55)+'px';tg.style.top=(e.touches[0].clientY-22)+'px';}e.preventDefault();},{passive:false});
+  el.addEventListener('touchend',e=>{if(tg){tg.remove();tg=null;}
+    if(!dragK)return;
+    const tc=e.changedTouches[0];doDrop(tc.clientX,tc.clientY);dragK=null;
+  });
+});
+
+const bwrap=document.getElementById('benchWrap');
+bwrap.addEventListener('dragover',e=>e.preventDefault());
+bwrap.addEventListener('drop',e=>{e.preventDefault();if(!dragK)return;
+  const el=document.querySelector(`.titem[data-k="${dragK}"]`);if(el&&el._ghost){el._ghost.remove();el._ghost=null;}
+  doDrop(e.clientX,e.clientY);dragK=null;
+});
+
+function doDrop(cx,cy){
+  const r=bc.getBoundingClientRect(),mx=cx-r.left,my=cy-r.top;
+  const z=zones()[dragK];
+  const d=Math.sqrt((mx-z.x-z.w/2)**2+(my-z.y-z.h/2)**2);
+  if(d<Math.max(z.w,z.h)*.9){
+    placed.push(dragK);
+    document.getElementById('t-'+dragK).classList.add('done');
+    const ck=document.getElementById('ck-'+dragK);ck.classList.add('ok');ck.querySelector('.ckico').textContent='✓';
+    const dot=document.getElementById('sd'+(step+1));if(dot){dot.classList.remove('now');dot.classList.add('ok');dot.textContent='✓';}
+    const ln=document.getElementById('sl'+(step+1));if(ln)ln.classList.add('ok');
+    step++;
+    if(step<order.length){
+      const nd=document.getElementById('sd'+(step+1));if(nd)nd.classList.add('now');
+      document.getElementById('smsg').innerHTML=msgs[step];
+      toast(`✓ ${labels[placed[placed.length-1]]} 배치 완료`,'ok');
+    }else{
+      document.getElementById('smsg').innerHTML='전선 연결 방식을 선택하세요 <span class="en">Choose wiring configuration</span>';
+      // Show wiring overlay, step 6
+      const nd6=document.getElementById('sd6');if(nd6)nd6.classList.add('now');
+      document.getElementById('wiringOverlay').classList.add('show');
+      toast('🔌 전선 연결 방식을 선택하세요','info');
+    }
+    drawBench();
+  }else{
+    toast('파란색 점선 영역 가까이에 놓아주세요','warn');
+  }
+}
+
+/* Phase transitions */
+document.getElementById('startBtn').onclick=()=>{
+  // Set initial current from PSU voltage
+  const initI=Math.min(psuVoltage/WIRE_R,2.5);
+  cur=initI;
+  dir=wirePolarity; // Apply wiring polarity as current direction
+  document.getElementById('cSlider').value=cur;
+  document.getElementById('cDisp').innerHTML=cur.toFixed(1)+'<span class="u">A</span>';
+  // Sync direction buttons
+  if(dir===1){document.getElementById('dUp').classList.add('on');document.getElementById('dDn').classList.remove('on');}
+  else{document.getElementById('dDn').classList.add('on');document.getElementById('dUp').classList.remove('on');}
+  document.getElementById('setupPhase').style.display='none';
+  document.getElementById('simPhase').style.display='block';
+  document.getElementById('simPhase').classList.add('fadein');
+  updateSim();
+};
+document.getElementById('backBtn').onclick=()=>{
+  document.getElementById('simPhase').style.display='none';
+  document.getElementById('setupPhase').style.display='flex';
+  resizeBench();
+};
+document.getElementById('resetBtn').onclick=()=>{
+  placed=[];step=0;psuVoltage=0;psuKnob.value=0;wirePolarity=1;
+  document.getElementById('psuOverlay').classList.remove('show');
+  document.getElementById('wiringOverlay').classList.remove('show');
+  document.getElementById('wiringA').classList.remove('selected');
+  document.getElementById('wiringB').classList.remove('selected');
+  updatePsuAmm();
+  document.querySelectorAll('.titem').forEach(e=>e.classList.remove('done'));
+  document.querySelectorAll('.ckitem').forEach((e,i)=>{e.classList.remove('ok');e.querySelector('.ckico').textContent=i+1;});
+  for(let i=1;i<=6;i++){const d=document.getElementById('sd'+i);if(d){d.classList.remove('ok','now');d.textContent=i;}const l=document.getElementById('sl'+i);if(l)l.classList.remove('ok');}
+  document.getElementById('sd1').classList.add('now');
+  document.getElementById('smsg').innerHTML=msgs[0];
+  document.getElementById('startBtn').disabled=true;
+  drawBench();
+};
+
+function toast(msg,type){
+  const t=document.getElementById('toast');t.textContent=msg;t.className='toast '+type+' show';
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+// Animate bench
+(function abench(){if(document.getElementById('setupPhase').style.display!=='none'&&document.getElementById('p-sim').classList.contains('on'))drawBench();requestAnimationFrame(abench);})();
+
+/* ========== SIMULATION ========== */
+const sc=document.getElementById('simCvs'),sx=sc.getContext('2d');
+document.getElementById('cSlider').oninput=e=>{cur=+e.target.value;document.getElementById('cDisp').innerHTML=cur.toFixed(1)+'<span class="u">A</span>';updateSim();};
+document.getElementById('dSlider').oninput=e=>{dist=+e.target.value/100;document.getElementById('dDisp').innerHTML=(+e.target.value).toFixed(1)+'<span class="u">cm</span>';updateSim();};
+document.getElementById('dUp').onclick=()=>{dir=1;document.getElementById('dUp').classList.add('on');document.getElementById('dDn').classList.remove('on');updateSim();};
+document.getElementById('dDn').onclick=()=>{dir=-1;document.getElementById('dDn').classList.add('on');document.getElementById('dUp').classList.remove('on');updateSim();};
+document.querySelectorAll('.vbtn').forEach(b=>b.onclick=()=>{document.querySelectorAll('.vbtn').forEach(x=>x.classList.remove('on'));b.classList.add('on');vm=b.dataset.v;drawSim();});
+document.getElementById('oFL').onchange=e=>{oFL=e.target.checked;drawSim();};
+document.getElementById('oCP').onchange=e=>{oCP=e.target.checked;drawSim();};
+document.getElementById('oVC').onchange=e=>{oVC=e.target.checked;drawSim();};
+document.getElementById('oGR').onchange=e=>{oGR=e.target.checked;drawSim();};
+document.getElementById('oEB').onchange=e=>{oEB=e.target.checked;updateSim();};
+
+function updateSim(){
+  const bw=Bw(cur,dist),be=oEB?B_EARTH:0,bn=Math.sqrt(bw*bw+be*be),th=theta(bw,be),tn=be>0?bw/be:Infinity;
+  document.getElementById('vBw').textContent=(bw*1e6).toFixed(1)+' μT';
+  document.getElementById('vBe').textContent=(be*1e6).toFixed(1)+' μT';
+  document.getElementById('vBn').textContent=(bn*1e6).toFixed(1)+' μT';
+  document.getElementById('vTh').textContent=th.toFixed(1)+'°';
+  document.getElementById('vTn').textContent=isFinite(tn)?tn.toFixed(3):'∞';
+  drawSim();
+}
+
+function drawSim(){
+  const W=sc.width,H=sc.height;sx.clearRect(0,0,W,H);sx.fillStyle='#0d1117';sx.fillRect(0,0,W,H);
+  if(oGR){sx.strokeStyle='rgba(255,255,255,.03)';sx.lineWidth=.5;for(let x=0;x<W;x+=40){sx.beginPath();sx.moveTo(x,0);sx.lineTo(x,H);sx.stroke();}for(let y=0;y<H;y+=40){sx.beginPath();sx.moveTo(0,y);sx.lineTo(W,y);sx.stroke();}}
+  if(vm==='top')drawTop(sx,W,H);else if(vm==='side')drawSide(sx,W,H);else draw3D(sx,W,H);
+}
+
+function drawTop(c,W,H){
+  const cx=W/2,cy=H/2,bw=Bw(cur,dist),be=oEB?B_EARTH:0,th=theta(bw,be);
+  if(oFL&&cur>0)for(let i=1;i<=8;i++){const r=i*28+10,a=Math.max(.05,.35-i*.035);c.strokeStyle=`rgba(6,182,212,${a})`;c.lineWidth=1.5;c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.stroke();const n=Math.max(4,8-i);for(let j=0;j<n;j++){const ag=(j/n)*Math.PI*2+af*.02*dir;ah(c,cx+Math.cos(ag)*r,cy+Math.sin(ag)*r,dir>0?ag+Math.PI/2:ag-Math.PI/2,6,`rgba(6,182,212,${a+.1})`);}}
+  // Wire
+  const wr=13,g=c.createRadialGradient(cx,cy,0,cx,cy,wr);g.addColorStop(0,'#f97316');g.addColorStop(.7,'#ea580c');g.addColorStop(1,'#c2410c');c.fillStyle=g;c.beginPath();c.arc(cx,cy,wr,0,Math.PI*2);c.fill();c.strokeStyle='#fb923c';c.lineWidth=1;c.stroke();
+  c.fillStyle='#fff';if(dir>0){c.beginPath();c.arc(cx,cy,4,0,Math.PI*2);c.fill();}else{c.strokeStyle='#fff';c.lineWidth=2.5;c.beginPath();c.moveTo(cx-5,cy-5);c.lineTo(cx+5,cy+5);c.moveTo(cx+5,cy-5);c.lineTo(cx-5,cy+5);c.stroke();}
+  const rP=Math.min(dist*8000,240),sx2=cx+rP;
+  c.strokeStyle='rgba(249,115,22,.5)';c.lineWidth=1;c.setLineDash([4,4]);c.beginPath();c.moveTo(cx+wr+4,cy);c.lineTo(sx2-10,cy);c.stroke();c.setLineDash([]);
+  c.fillStyle='#f97316';c.font='11px Noto Sans KR';c.textAlign='center';c.fillText(`r = ${(dist*100).toFixed(1)} cm`,(cx+sx2)/2,cy-10);
+  if(oCP){const cr=26;c.strokeStyle='rgba(255,255,255,.15)';c.lineWidth=1.5;c.beginPath();c.arc(sx2,cy,cr,0,Math.PI*2);c.stroke();
+    const na=-th*Math.PI/180*dir,nl=cr-6;c.strokeStyle='#ef4444';c.lineWidth=3;c.beginPath();c.moveTo(sx2,cy);c.lineTo(sx2+Math.sin(na)*nl,cy-Math.cos(na)*nl);c.stroke();ah(c,sx2+Math.sin(na)*nl,cy-Math.cos(na)*nl,-na+Math.PI/2+Math.PI,7,'#ef4444');
+    c.strokeStyle='rgba(255,255,255,.5)';c.lineWidth=3;c.beginPath();c.moveTo(sx2,cy);c.lineTo(sx2-Math.sin(na)*nl,cy+Math.cos(na)*nl);c.stroke();
+    if(th>.5){c.strokeStyle='rgba(16,185,129,.6)';c.lineWidth=1.5;const sa=-Math.PI/2,ea=sa+th*Math.PI/180*dir;c.beginPath();c.arc(sx2,cy,cr+8,Math.min(sa,ea),Math.max(sa,ea));c.stroke();c.fillStyle='#10b981';c.font='12px JetBrains Mono';c.textAlign='left';c.fillText(`θ=${th.toFixed(1)}°`,sx2+cr+12,cy-8);}
+    c.fillStyle='rgba(255,255,255,.25)';c.font='9px Noto Sans KR';c.textAlign='center';c.fillText('N',sx2,cy-cr-5);c.fillText('S',sx2,cy+cr+11);c.fillText('E',sx2+cr+8,cy+3);c.fillText('W',sx2-cr-8,cy+3);
+  }
+  if(oVC){const vs=1.8;if(oEB){const eL=be*1e6*vs;c.strokeStyle='#3b82f6';c.lineWidth=2.5;c.beginPath();c.moveTo(sx2,cy);c.lineTo(sx2,cy-eL);c.stroke();ah(c,sx2,cy-eL,Math.PI,8,'#3b82f6');c.fillStyle='#3b82f6';c.font='10px JetBrains Mono';c.textAlign='right';c.fillText('B_earth',sx2-8,cy-eL/2);}
+    if(cur>0){const wL=bw*1e6*vs;c.strokeStyle='#f97316';c.lineWidth=2.5;c.beginPath();c.moveTo(sx2,cy);c.lineTo(sx2,cy+wL*dir);c.stroke();ah(c,sx2,cy+wL*dir,dir>0?Math.PI*1.5:Math.PI/2,8,'#f97316');c.fillStyle='#f97316';c.font='10px JetBrains Mono';c.textAlign='left';c.fillText('B_wire',sx2+8,cy+wL*dir/2);}}
+  c.fillStyle='rgba(255,255,255,.4)';c.font='11px Noto Sans KR';c.textAlign='left';c.fillText('▲ 위에서 본 모습 (Top View)',14,22);
+}
+
+function drawSide(c,W,H){
+  const cx=W/2,cy=H/2;
+  const wg=c.createLinearGradient(cx-8,0,cx+8,0);wg.addColorStop(0,'#c2410c');wg.addColorStop(.5,'#f97316');wg.addColorStop(1,'#c2410c');c.fillStyle=wg;c.fillRect(cx-8,40,16,H-80);
+  c.strokeStyle='#fff';c.lineWidth=2;const aY=dir>0?cy-60:cy+60,aE=dir>0?cy-120:cy+120;c.beginPath();c.moveTo(cx,aY);c.lineTo(cx,aE);c.stroke();ah(c,cx,aE,dir>0?Math.PI:0,10,'#fff');
+  c.fillStyle='#fff';c.font='bold 14px JetBrains Mono';c.textAlign='left';c.fillText('I',cx+14,(aY+aE)/2+4);
+  if(oFL&&cur>0)for(let i=1;i<=6;i++){const r=i*35,al=Math.max(.05,.3-i*.04);c.fillStyle=`rgba(6,182,212,${al+.15})`;if(dir>0){c.beginPath();c.arc(cx-r,cy,3,0,Math.PI*2);c.fill();c.strokeStyle=`rgba(6,182,212,${al+.15})`;c.lineWidth=1.5;const s=4;c.beginPath();c.moveTo(cx+r-s,cy-s);c.lineTo(cx+r+s,cy+s);c.moveTo(cx+r+s,cy-s);c.lineTo(cx+r-s,cy+s);c.stroke();}else{c.beginPath();c.arc(cx+r,cy,3,0,Math.PI*2);c.fill();c.strokeStyle=`rgba(6,182,212,${al+.15})`;c.lineWidth=1.5;const s=4;c.beginPath();c.moveTo(cx-r-s,cy-s);c.lineTo(cx-r+s,cy+s);c.moveTo(cx-r+s,cy-s);c.lineTo(cx-r-s,cy+s);c.stroke();}}
+  c.fillStyle='rgba(255,255,255,.4)';c.font='11px Noto Sans KR';c.textAlign='left';c.fillText('▲ 옆에서 본 모습 (Side View)',14,22);
+}
+
+function draw3D(c,W,H){
+  const cx=W/2,cy=H/2;c.save();c.translate(cx,cy);
+  const wg=c.createLinearGradient(-6,0,6,0);wg.addColorStop(0,'#c2410c');wg.addColorStop(.5,'#f97316');wg.addColorStop(1,'#c2410c');c.fillStyle=wg;c.fillRect(-6,-230,12,370);
+  c.strokeStyle='#fff';c.lineWidth=2;c.beginPath();if(dir>0){c.moveTo(0,20);c.lineTo(0,-80);c.stroke();ah(c,0,-80,Math.PI,9,'#fff');}else{c.moveTo(0,-80);c.lineTo(0,20);c.stroke();ah(c,0,20,0,9,'#fff');}
+  c.fillStyle='#fff';c.font='bold 16px JetBrains Mono';c.textAlign='left';c.fillText('I',14,-30);
+  if(oFL&&cur>0)for(let ring=1;ring<=6;ring++){const r=ring*35,al=Math.max(.05,.3-ring*.04);c.strokeStyle=`rgba(6,182,212,${al})`;c.lineWidth=1.5;c.beginPath();c.ellipse(0,0,r,r*.35,0,0,Math.PI*2);c.stroke();const na=Math.max(3,6-ring);for(let a=0;a<na;a++){const ang=(a/na)*Math.PI*2+af*.02*dir,ax=Math.cos(ang)*r,ay=Math.sin(ang)*r*.35,t=dir>0?ang+Math.PI/2:ang-Math.PI/2,tx=-Math.sin(t)*5,ty=Math.cos(t)*5*.35;c.fillStyle=`rgba(6,182,212,${al+.15})`;c.beginPath();c.moveTo(ax,ay);c.lineTo(ax-tx-ty*.5,ay-ty+tx*.5);c.lineTo(ax+tx-ty*.5,ay+ty+tx*.5);c.fill();}}
+  c.restore();c.fillStyle='rgba(255,255,255,.4)';c.font='11px Noto Sans KR';c.textAlign='left';c.fillText('▲ 3D 투시도',14,22);
+}
+
+function ah(c,x,y,a,s,col){c.save();c.translate(x,y);c.rotate(a-Math.PI/2);c.fillStyle=col;c.beginPath();c.moveTo(0,-s);c.lineTo(-s*.5,0);c.lineTo(s*.5,0);c.closePath();c.fill();c.restore();}
+function rrp(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.lineTo(x+w-r,y);c.quadraticCurveTo(x+w,y,x+w,y+r);c.lineTo(x+w,y+h-r);c.quadraticCurveTo(x+w,y+h,x+w-r,y+h);c.lineTo(x+r,y+h);c.quadraticCurveTo(x,y+h,x,y+h-r);c.lineTo(x,y+r);c.quadraticCurveTo(x,y,x+r,y);c.closePath();}
+
+/* ========== VECTOR ========== */
+const vc=document.getElementById('vecCvs'),vx=vc.getContext('2d');
+document.getElementById('vcSlider').oninput=e=>{document.getElementById('vcDisp').innerHTML=(+e.target.value).toFixed(1)+'<span class="u">A</span>';drawVec();};
+function drawVec(){
+  const W=vc.width,H=vc.height;vx.clearRect(0,0,W,H);vx.fillStyle='#0d1117';vx.fillRect(0,0,W,H);
+  const I=+document.getElementById('vcSlider').value,bw=Bw(I,.01),be=B_EARTH,bn=Math.sqrt(bw*bw+be*be),th=theta(bw,be);
+  document.getElementById('vcBw').textContent=(bw*1e6).toFixed(1)+' μT';document.getElementById('vcBe').textContent=(be*1e6).toFixed(1)+' μT';
+  document.getElementById('vcBn').textContent=(bn*1e6).toFixed(1)+' μT';document.getElementById('vcTh').textContent=th.toFixed(1)+'°';
+  const ox=150,oy=350,s=3.2,eL=be*1e6*s,wL=bw*1e6*s;
+  vx.strokeStyle='rgba(255,255,255,.1)';vx.lineWidth=1;vx.beginPath();vx.moveTo(ox,30);vx.lineTo(ox,H-20);vx.stroke();vx.beginPath();vx.moveTo(30,oy);vx.lineTo(W-20,oy);vx.stroke();
+  vx.fillStyle='rgba(255,255,255,.25)';vx.font='10px Noto Sans KR';vx.textAlign='center';vx.fillText('북(N)',ox,22);vx.fillText('남(S)',ox,H-8);vx.textAlign='left';vx.fillText('동(E)',W-40,oy-6);
+  vx.strokeStyle='#3b82f6';vx.lineWidth=4;vx.beginPath();vx.moveTo(ox,oy);vx.lineTo(ox,oy-eL);vx.stroke();ah(vx,ox,oy-eL,Math.PI,12,'#3b82f6');
+  vx.fillStyle='#3b82f6';vx.font='bold 13px JetBrains Mono';vx.textAlign='right';vx.fillText('B_earth',ox-10,oy-eL/2);
+  if(I>0){vx.strokeStyle='#f97316';vx.lineWidth=4;vx.beginPath();vx.moveTo(ox,oy);vx.lineTo(ox+wL,oy);vx.stroke();ah(vx,ox+wL,oy,Math.PI/2,12,'#f97316');
+    vx.fillStyle='#f97316';vx.textAlign='center';vx.fillText('B_wire',ox+wL/2,oy+20);
+    vx.strokeStyle='rgba(255,255,255,.08)';vx.lineWidth=1;vx.setLineDash([4,4]);vx.beginPath();vx.moveTo(ox+wL,oy);vx.lineTo(ox+wL,oy-eL);vx.stroke();vx.beginPath();vx.moveTo(ox,oy-eL);vx.lineTo(ox+wL,oy-eL);vx.stroke();vx.setLineDash([]);
+    vx.strokeStyle='#10b981';vx.lineWidth=4;vx.beginPath();vx.moveTo(ox,oy);vx.lineTo(ox+wL,oy-eL);vx.stroke();ah(vx,ox+wL,oy-eL,Math.atan2(-eL,wL)+Math.PI/2,12,'#10b981');
+    vx.fillStyle='#10b981';vx.textAlign='left';vx.fillText('B_net',ox+wL/2+14,oy-eL/2-6);
+    vx.strokeStyle='rgba(168,85,247,.7)';vx.lineWidth=2;vx.beginPath();vx.arc(ox,oy,42,-Math.PI/2,-Math.PI/2+th*Math.PI/180);vx.stroke();
+    vx.fillStyle='#a855f7';vx.font='bold 14px JetBrains Mono';const la=-Math.PI/2+th*Math.PI/360;vx.fillText(`θ=${th.toFixed(1)}°`,ox+Math.cos(la)*60,oy+Math.sin(la)*60);}
+}
+
+/* ========== DATA ========== */
+let expD=[];
+function genData(){expD=[];[.5,1,1.5,2,2.5].forEach(I=>{const bt=Bw(I,.01),tt=theta(bt,B_EARTH),n=(Math.random()-.5)*3,tm=Math.max(1,tt+n),tn=Math.tan(tm*Math.PI/180);expD.push({I,Bt:bt*1e6,th:tm,tn,inv:1/tn});});
+  const tb=document.getElementById('dtBody');tb.innerHTML='';expD.forEach(d=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${d.I.toFixed(1)}</td><td>${d.Bt.toFixed(1)}</td><td>${d.th.toFixed(1)}</td><td>${d.tn.toFixed(3)}</td><td>${d.inv.toFixed(3)}</td>`;tb.appendChild(tr);});}
+document.getElementById('noiseBtn').onclick=()=>{genData();drawGr();};
+
+function drawGr(){
+  const cv=document.getElementById('grCvs'),c=cv.getContext('2d'),W=cv.width,H=cv.height;c.clearRect(0,0,W,H);c.fillStyle='#0d1117';c.fillRect(0,0,W,H);
+  if(!expD.length)genData();
+  const p={t:50,r:45,b:55,l:65},gW=W-p.l-p.r,gH=H-p.t-p.b,xM=3,yM=Math.max(6,...expD.map(d=>d.inv))*1.2;
+  const tx=v=>p.l+(v/xM)*gW,ty=v=>p.t+gH-(v/yM)*gH;
+  c.strokeStyle='rgba(255,255,255,.05)';c.lineWidth=.5;for(let x=0;x<=xM;x+=.5){c.beginPath();c.moveTo(tx(x),p.t);c.lineTo(tx(x),p.t+gH);c.stroke();}for(let y=0;y<=yM;y++){c.beginPath();c.moveTo(p.l,ty(y));c.lineTo(p.l+gW,ty(y));c.stroke();}
+  c.strokeStyle='rgba(255,255,255,.3)';c.lineWidth=1.5;c.beginPath();c.moveTo(p.l,p.t);c.lineTo(p.l,p.t+gH);c.lineTo(p.l+gW,p.t+gH);c.stroke();
+  c.fillStyle='#94a3b8';c.font='11px Noto Sans KR';c.textAlign='center';c.fillText('전류 I (A)',W/2,H-10);
+  c.save();c.translate(16,H/2);c.rotate(-Math.PI/2);c.fillText('1/tanθ',0,0);c.restore();
+  c.font='9px JetBrains Mono';c.fillStyle='#64748b';c.textAlign='center';for(let x=0;x<=xM;x+=.5)c.fillText(x.toFixed(1),tx(x),p.t+gH+16);
+  c.textAlign='right';for(let y=0;y<=yM;y++)c.fillText(y.toFixed(0),p.l-7,ty(y)+3);
+  let sX=0,sY=0,sXY=0,sXX=0,n=expD.length;expD.forEach(d=>{sX+=d.I;sY+=d.inv;sXY+=d.I*d.inv;sXX+=d.I*d.I;});
+  const sl=(n*sXY-sX*sY)/(n*sXX-sX*sX),ic=(sY-sl*sX)/n,ym=sY/n;let st=0,sr=0;expD.forEach(d=>{st+=(d.inv-ym)**2;sr+=(d.inv-(sl*d.I+ic))**2;});const r2=1-sr/st;
+  c.strokeStyle='rgba(6,182,212,.6)';c.lineWidth=2;c.setLineDash([8,4]);c.beginPath();c.moveTo(tx(0),ty(ic));c.lineTo(tx(xM),ty(sl*xM+ic));c.stroke();c.setLineDash([]);
+  expD.forEach(d=>{const px=tx(d.I),py=ty(d.inv);const gl=c.createRadialGradient(px,py,0,px,py,12);gl.addColorStop(0,'rgba(249,115,22,.3)');gl.addColorStop(1,'transparent');c.fillStyle=gl;c.fillRect(px-12,py-12,24,24);c.fillStyle='#f97316';c.beginPath();c.arc(px,py,5,0,Math.PI*2);c.fill();c.strokeStyle='#fff';c.lineWidth=1.5;c.stroke();});
+  const bx2=p.l+gW-190,by2=p.t+8;c.fillStyle='rgba(17,24,39,.9)';c.strokeStyle='rgba(6,182,212,.3)';c.lineWidth=1;rrp(c,bx2,by2,180,75,8);c.fill();c.stroke();
+  c.fillStyle='#06b6d4';c.font='bold 9px JetBrains Mono';c.textAlign='left';c.fillText('Linear Regression',bx2+10,by2+16);
+  c.fillStyle='#94a3b8';c.font='11px JetBrains Mono';c.fillText(`slope = ${sl.toFixed(3)}`,bx2+10,by2+34);c.fillText(`intercept = ${ic.toFixed(3)}`,bx2+10,by2+50);
+  c.fillStyle='#10b981';c.fillText(`R² = ${r2.toFixed(4)}`,bx2+10,by2+66);
+  c.fillStyle='rgba(255,255,255,.5)';c.font='bold 12px Noto Sans KR';c.textAlign='center';c.fillText('1/tanθ vs I — 지구자기장 역산',W/2,26);
+}
+
+/* ========== ANIM ========== */
+(function anim(){af++;if(document.getElementById('simPhase').style.display!=='none'&&document.getElementById('p-sim').classList.contains('on'))drawSim();requestAnimationFrame(anim);})();
+
+/* ========== INIT ========== */
+updateSim();drawVec();genData();drawGr();updatePsuAmm();
+setTimeout(resizeBench,200);
+</script>
+</body>
+</html>
