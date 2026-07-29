@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>로켓방정식 · 상대속도 랩</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#070B15;--bg-grad-1:#0A1120;--bg-grad-2:#050810;
+    --panel:#0E1526;--panel-2:#111B30;--line:#1D2A44;--line-soft:#16223A;
+    --text:#E8EDF6;--muted:#8496B4;--muted-2:#5B6B87;
+    --cyan:#31D6E6;--amber:#FBBF24;
+    --down:#4F8DF9;--zero:#FCD34D;--up:#FB6B5B;
+    --flame-1:#FFE08A;--flame-2:#FF9A3C;--flame-3:#F5522B;
+    --good:#34D399;--fix:#38BDF8;--warn:#FBBF24;--bad:#FB6B5B;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Noto Sans KR','Space Grotesk',system-ui,sans-serif;
+    background:radial-gradient(1200px 800px at 70% -10%, var(--bg-grad-1), var(--bg-grad-2) 60%, var(--bg));
+    color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;letter-spacing:.1px;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+  .disp{font-family:'Space Grotesk',sans-serif}
+  [hidden]{display:none !important}
+
+  /* ---------- App header ---------- */
+  .appbar{
+    padding:14px 24px;border-bottom:1px solid var(--line-soft);
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  }
+  .appbar .tag{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2.5px;color:var(--cyan);
+    text-transform:uppercase;border:1px solid var(--line);border-radius:20px;padding:5px 12px}
+  .appbar h1{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:18px}
+  .appbar h1 .em{color:var(--cyan)}
+  .appbar .who{margin-left:auto;display:flex;align-items:center;gap:12px;font-size:13px;color:var(--muted)}
+  .appbar .who b{color:var(--text);font-weight:500}
+  .minibtn{border:1px solid var(--line);background:var(--panel-2);color:var(--muted);border-radius:8px;
+    padding:7px 12px;font-size:12px;cursor:pointer;transition:.15s;font-family:inherit}
+  .minibtn:hover{border-color:var(--cyan);color:var(--cyan)}
+
+  /* ---------- Login ---------- */
+  .login-wrap{min-height:calc(100vh - 56px);display:flex;align-items:center;justify-content:center;padding:24px}
+  .login-card{width:100%;max-width:420px;background:var(--panel);border:1px solid var(--line);
+    border-radius:18px;padding:30px 28px;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+  .login-card .lead{text-align:center;margin-bottom:22px}
+  .login-card .lead .tag{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2.5px;color:var(--cyan);text-transform:uppercase}
+  .login-card .lead h2{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:23px;margin-top:8px}
+  .login-card .lead p{color:var(--muted);font-size:13px;margin-top:8px;line-height:1.5}
+  .tabs{display:flex;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:4px;margin-bottom:22px}
+  .tabs button{flex:1;border:none;background:transparent;color:var(--muted);padding:9px;border-radius:7px;
+    font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;transition:.15s}
+  .tabs button.on{background:var(--cyan);color:#04121A}
+  .fld{margin-bottom:14px}
+  .fld label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+  .fld input{width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:9px;
+    color:var(--text);padding:11px 13px;font-family:inherit;font-size:14px;outline:none;transition:.15s}
+  .fld input:focus{border-color:var(--cyan)}
+  .bigbtn{width:100%;border:none;border-radius:10px;padding:13px;font-family:'Space Grotesk',sans-serif;
+    font-size:15px;font-weight:600;cursor:pointer;transition:.15s;margin-top:6px}
+  .bigbtn.cyan{background:linear-gradient(180deg,#2CD4E4,#1AA6B8);color:#04121A}
+  .bigbtn.cyan:hover{filter:brightness(1.08)}
+  .bigbtn.amber{background:linear-gradient(180deg,#FBBF24,#E09A12);color:#1A1204}
+  .err{color:var(--bad);font-size:12px;margin-top:10px;min-height:16px;text-align:center}
+
+  /* ---------- PoE modal ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(4,8,16,.82);backdrop-filter:blur(4px);
+    display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
+  .quiz{width:100%;max-width:560px;background:var(--panel);border:1px solid var(--line);border-radius:18px;
+    padding:26px 26px 22px;box-shadow:0 20px 60px rgba(0,0,0,.5);max-height:92vh;overflow:auto}
+  .quiz .qtag{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase}
+  .quiz.pre .qtag{color:var(--amber)} .quiz.post .qtag{color:var(--good)}
+  .quiz h3{font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:600;margin:8px 0 6px}
+  .quiz .qsub{color:var(--muted);font-size:13px;line-height:1.5;margin-bottom:18px}
+  .qitem{margin-bottom:18px}
+  .qitem .qtext{font-size:14.5px;font-weight:500;margin-bottom:10px;line-height:1.5}
+  .qitem .qtext .n{color:var(--cyan);font-family:'JetBrains Mono',monospace;margin-right:6px}
+  .opts{display:flex;flex-direction:column;gap:8px}
+  .opt{border:1px solid var(--line);background:var(--panel-2);border-radius:9px;padding:11px 13px;
+    font-size:13.5px;cursor:pointer;transition:.14s;display:flex;gap:10px;align-items:center;color:var(--text)}
+  .opt:hover{border-color:var(--cyan)}
+  .opt.sel{border-color:var(--cyan);background:rgba(49,214,230,.1)}
+  .opt .key{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);
+    border:1px solid var(--line);border-radius:5px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex:none}
+  .opt.sel .key{color:var(--cyan);border-color:var(--cyan)}
+  .quiz .qfoot{display:flex;gap:10px;margin-top:8px}
+  .quiz .note{font-size:11.5px;color:var(--muted-2);margin-top:4px;line-height:1.5}
+
+  /* ---------- Sim layout (reused) ---------- */
+  .wrap{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;padding:18px 22px 40px;max-width:1500px;margin:0 auto}
+  @media (max-width:1080px){.wrap{grid-template-columns:1fr}}
+  .stage{display:flex;flex-direction:column;gap:16px;min-width:0}
+  .frames{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:640px){.frames{grid-template-columns:1fr}}
+  .frame{background:linear-gradient(180deg,#0B1324 0%, #070C17 100%);border:1px solid var(--line);
+    border-radius:var(--radius);overflow:hidden;position:relative}
+  .frame .flabel{position:absolute;top:10px;left:12px;z-index:3;font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+  .frame .flabel b{display:block;font-size:12.5px;letter-spacing:.5px;text-transform:none;margin-top:2px}
+  .frame.ground .flabel b{color:var(--cyan)} .frame.rocket .flabel b{color:var(--amber)}
+  .frame canvas{display:block;width:100%;height:340px}
+  @media (max-width:640px){.frame canvas{height:300px}}
+  .telem{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 18px;display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  @media (max-width:760px){.telem{grid-template-columns:repeat(2,1fr)}}
+  .cell .k{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--muted-2);text-transform:uppercase}
+  .cell .v{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:500;margin-top:3px;line-height:1.1}
+  .cell .u{font-size:11px;color:var(--muted);font-weight:400;margin-left:3px}
+  .cell.hero{grid-column:span 2;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:-4px}
+  .cell.hero .v{font-size:26px}
+  .cell.hero .caption{font-size:12px;margin-top:5px;color:var(--muted);font-weight:500}
+  .graph{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px 8px}
+  .graph .ghead{display:flex;align-items:center;gap:16px;margin-bottom:6px}
+  .graph .ghead .t{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+  .graph .leg{display:flex;gap:14px;margin-left:auto;font-size:11px;color:var(--muted)}
+  .graph .leg i{display:inline-block;width:10px;height:2.5px;border-radius:2px;margin-right:5px;vertical-align:middle}
+  .graph canvas{display:block;width:100%;height:150px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;
+    display:flex;flex-direction:column;gap:16px;align-self:start;position:sticky;top:14px}
+  @media (max-width:1080px){.panel{position:static}}
+  .panel h2{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-weight:500}
+  .transport{display:flex;gap:8px}
+  .btn{flex:1;border:1px solid var(--line);background:var(--panel-2);color:var(--text);border-radius:9px;
+    padding:10px 8px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:500;cursor:pointer;
+    transition:.15s;display:flex;align-items:center;justify-content:center;gap:6px}
+  .btn:hover{border-color:var(--cyan);color:var(--cyan)}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:linear-gradient(180deg,#124657,#0E3543);border-color:#1C6C82;color:var(--cyan)}
+  .btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+  .sliders{display:flex;flex-direction:column;gap:14px}
+  .field label{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;color:var(--muted);margin-bottom:6px}
+  .field label .name{color:var(--text);font-weight:500}
+  .field label .name span{color:var(--muted);font-weight:400;font-size:11px;margin-left:4px}
+  .field label .val{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--cyan)}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:4px;background:var(--line);outline:none;cursor:pointer}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:var(--cyan);border:2px solid #0A1120;box-shadow:0 0 0 1px var(--cyan);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--cyan);border:2px solid #0A1120;cursor:pointer}
+  .presets{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .chip{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:8px;padding:9px 6px;
+    font-family:'Noto Sans KR',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:.15s;text-align:center}
+  .chip:hover{border-color:var(--amber);color:var(--amber)}
+  .chip.demo{border-color:#3A2F14;color:var(--amber);background:rgba(251,191,36,.06)}
+  .toggles{display:flex;flex-direction:column;gap:10px}
+  .tog{display:flex;align-items:center;justify-content:space-between;font-size:12.5px;color:var(--muted)}
+  .switch{position:relative;width:38px;height:21px;flex:none}
+  .switch input{opacity:0;width:0;height:0}
+  .slider-t{position:absolute;inset:0;background:var(--line);border-radius:21px;transition:.2s;cursor:pointer}
+  .slider-t:before{content:"";position:absolute;height:15px;width:15px;left:3px;top:3px;background:var(--muted);border-radius:50%;transition:.2s}
+  .switch input:checked + .slider-t{background:rgba(49,214,230,.25)}
+  .switch input:checked + .slider-t:before{transform:translateX(17px);background:var(--cyan)}
+  .speedrow{display:flex;align-items:center;gap:8px}
+  .speedrow .sbtn{border:1px solid var(--line);background:var(--panel-2);color:var(--muted);border-radius:7px;padding:6px 0;flex:1;font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:.15s}
+  .speedrow .sbtn.on{border-color:var(--cyan);color:var(--cyan);background:rgba(49,214,230,.08)}
+  .divider{height:1px;background:var(--line-soft)}
+  .hint{font-size:11.5px;color:var(--muted-2);line-height:1.6;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:9px;padding:10px 12px}
+  .hint b{color:var(--muted)}
+  .eq{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);text-align:center;padding:2px 0 0}
+  .eq .hl{color:var(--amber)}
+  .missionbox{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:9px;padding:11px 13px}
+  .missionbox .mt{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);margin-bottom:6px}
+  .missionbox .ms{font-size:12.5px;color:var(--text);line-height:1.5}
+  .taskrow{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-top:8px}
+  .taskrow .dot{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--muted-2);flex:none;display:flex;align-items:center;justify-content:center;font-size:9px}
+  .taskrow.done{color:var(--good)} .taskrow.done .dot{border-color:var(--good);background:rgba(52,211,153,.15);color:var(--good)}
+
+  /* ---------- Dashboard ---------- */
+  .dash{max-width:1400px;margin:0 auto;padding:20px 24px 50px}
+  .dash .drow{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+  .dash h2{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:600}
+  .dash .dactions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+  .cards{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+  @media (max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}}
+  .scard{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px 16px}
+  .scard .sk{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted-2)}
+  .scard .sv{font-family:'JetBrains Mono',monospace;font-size:27px;font-weight:600;margin-top:6px;line-height:1}
+  .scard .sd{font-size:11px;color:var(--muted);margin-top:5px}
+  .grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:20px}
+  @media (max-width:1000px){.grid2{grid-template-columns:1fr}}
+  .box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .box .bt{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.5px;text-transform:uppercase;
+    color:var(--muted-2);font-weight:500;padding:8px 10px;border-bottom:1px solid var(--line)}
+  td{padding:10px;border-bottom:1px solid var(--line-soft);color:var(--text)}
+  tr.srow{cursor:pointer;transition:.12s}
+  tr.srow:hover td{background:var(--panel-2)}
+  .badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
+  .badge.good{color:var(--good);background:rgba(52,211,153,.12)}
+  .badge.fix{color:var(--fix);background:rgba(56,189,248,.12)}
+  .badge.warn{color:var(--warn);background:rgba(251,191,36,.12)}
+  .badge.bad{color:var(--bad);background:rgba(251,107,91,.14)}
+  .pill{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+  .ck{color:var(--good)} .cx{color:var(--muted-2)}
+  .bar{display:flex;flex-direction:column;gap:9px}
+  .barrow{display:flex;align-items:center;gap:10px;font-size:12px}
+  .barrow .bl{width:132px;color:var(--muted);flex:none}
+  .barrow .btrack{flex:1;height:14px;background:var(--panel-2);border-radius:7px;overflow:hidden;border:1px solid var(--line)}
+  .barrow .bfill{height:100%;border-radius:7px}
+  .barrow .bn{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text);width:28px;text-align:right}
+  .empty{text-align:center;color:var(--muted);padding:40px 20px;font-size:14px;line-height:1.6}
+  .detail{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:16px;margin-top:14px}
+  .detail .dh{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .detail .dh .nm{font-weight:600;font-size:15px}
+  .kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+  .kv .item{background:var(--panel);border:1px solid var(--line-soft);border-radius:8px;padding:9px 11px}
+  .kv .item .ik{font-size:10px;color:var(--muted-2);text-transform:uppercase;font-family:'JetBrains Mono',monospace}
+  .kv .item .iv{font-family:'JetBrains Mono',monospace;font-size:15px;margin-top:3px}
+  .tl{max-height:200px;overflow:auto;font-family:'JetBrains Mono',monospace;font-size:11.5px}
+  .tl .ev{display:flex;gap:10px;padding:4px 0;border-bottom:1px solid var(--line-soft);color:var(--muted)}
+  .tl .ev .et{color:var(--muted-2);width:52px;flex:none}
+  .tl .ev .ey{color:var(--cyan);width:74px;flex:none}
+</style>
+<!-- Firebase (중앙 수집용) : firebaseConfig를 채우면 자동 활성화됩니다 -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<div class="appbar">
+  <span class="tag">Δv · Tsiolkovsky</span>
+  <h1 class="disp">로켓방정식 <span class="em">상대속도</span> 랩</h1>
+  <div class="who" id="whoBox" hidden>
+    <span id="whoText"></span>
+    <button class="minibtn" id="btnToDash" hidden>교사 대시보드</button>
+    <button class="minibtn" id="btnLogout">나가기</button>
+  </div>
+</div>
+
+<!-- ============ LOGIN VIEW ============ -->
+<div id="viewLogin">
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="lead">
+        <div class="tag">Reference Frame Lab</div>
+        <h2 class="disp">시뮬레이터 입장</h2>
+        <p>두 기준틀에서 로켓 배기가스를 관찰하고,<br>예측이 어떻게 바뀌는지 기록합니다.</p>
+      </div>
+      <div class="tabs">
+        <button id="tabStudent" class="on">학생 · Student</button>
+        <button id="tabTeacher">교사 · Teacher</button>
+      </div>
+      <div id="paneStudent">
+        <div class="fld"><label>학번 · Student ID</label><input id="inSid" placeholder="예: 20312" autocomplete="off"></div>
+        <div class="fld"><label>이름 · Name</label><input id="inName" placeholder="예: 김민준" autocomplete="off"></div>
+        <button class="bigbtn cyan" id="btnEnter">입장하기 →</button>
+        <div class="err" id="errStudent"></div>
+      </div>
+      <div id="paneTeacher" hidden>
+        <div class="fld"><label>교사 PIN · Teacher PIN</label><input id="inPin" type="password" placeholder="PIN" autocomplete="off"></div>
+        <button class="bigbtn amber" id="btnTeacher">대시보드 열기 →</button>
+        <div class="err" id="errTeacher"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SIM VIEW ============ -->
+<div id="viewSim" hidden>
+  <div class="wrap">
+    <div class="stage">
+      <div class="frames">
+        <div class="frame ground" id="frameGround">
+          <div class="flabel">기준틀 / Reference Frame<b>지면 관측자 · Ground</b></div>
+          <canvas id="cvGround"></canvas>
+        </div>
+        <div class="frame rocket" id="frameRocket">
+          <div class="flabel">기준틀 / Reference Frame<b>로켓 탑승자 · Rocket</b></div>
+          <canvas id="cvRocket"></canvas>
+        </div>
+      </div>
+      <div class="telem">
+        <div class="cell hero" id="heroCell">
+          <div class="k">배기가스의 지상속도 · exhaust velocity (ground)</div>
+          <div class="v mono" id="vExhaust" style="color:var(--down)">–</div>
+          <div class="caption" id="exCaption">–</div>
+        </div>
+        <div class="cell"><div class="k">로켓 속도 · v</div><div class="v mono" style="color:var(--cyan)"><span id="vRocket">0</span><span class="u">m/s</span></div></div>
+        <div class="cell"><div class="k">배기속도 · vₑ</div><div class="v mono" style="color:var(--amber)"><span id="vE">0</span><span class="u">m/s</span></div></div>
+        <div class="cell"><div class="k">현재 질량비 · m₀/m</div><div class="v mono"><span id="massRatio">1.00</span></div></div>
+        <div class="cell"><div class="k">이론 Δv · 누적 이상값</div><div class="v mono"><span id="dvTheory">0</span><span class="u">m/s</span></div></div>
+        <div class="cell"><div class="k">가속도 · a = F/m − g</div><div class="v mono" style="color:var(--cyan)"><span id="accel">0.0</span><span class="u">m/s²</span></div></div>
+        <div class="cell"><div class="k">질량중심 속도 · v_cm</div><div class="v mono"><span id="vcm">0.0</span><span class="u">m/s</span></div></div>
+        <div class="cell"><div class="k">남은 연료 · fuel</div><div class="v mono"><span id="fuelLeft">0</span><span class="u">kg</span></div></div>
+        <div class="cell"><div class="k">고도 · altitude</div><div class="v mono"><span id="alt">0</span><span class="u">m</span></div></div>
+        <div class="cell"><div class="k">경과 · t</div><div class="v mono"><span id="tElapsed">0.0</span><span class="u">s</span></div></div>
+      </div>
+      <div class="graph">
+        <div class="ghead"><span class="t">속도 로그 · velocity log</span>
+          <span class="leg"><span><i style="background:var(--cyan)"></i>로켓 v</span><span><i style="background:var(--amber)"></i>배기가스 (지상)</span></span>
+        </div>
+        <canvas id="cvGraph"></canvas>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="missionbox" id="missionBox">
+        <div class="mt">미션 · mission</div>
+        <div class="ms">배기가스가 지면에서 <b>정지</b>했다가 <b>위로</b> 올라가는 순간을 직접 만들어 보세요.</div>
+        <div class="taskrow" id="taskZero"><span class="dot">✓</span> 배기가스를 지상 기준 정지시키기 (v ≈ vₑ)</div>
+        <div class="taskrow" id="taskUp"><span class="dot">✓</span> 배기가스를 지상 기준 위로 올리기 (v &gt; vₑ)</div>
+      </div>
+      <div class="transport">
+        <button class="btn primary" id="btnPlay">▶ 발사</button>
+        <button class="btn" id="btnReset">↺ 초기화</button>
+      </div>
+      <div class="eq">Δv = <span class="hl">vₑ</span> · ln( m₀ / m )</div>
+      <div class="divider"></div>
+      <h2>로켓 특성 · parameters</h2>
+      <div class="sliders">
+        <div class="field"><label><span class="name">배기속도 <span>vₑ · exhaust</span></span><span class="val" id="lblVe">2000 m/s</span></label><input type="range" id="inVe" min="800" max="4500" step="50" value="2000"></div>
+        <div class="field"><label><span class="name">건조질량 <span>dry mass</span></span><span class="val" id="lblDry">1000 kg</span></label><input type="range" id="inDry" min="200" max="4000" step="50" value="1000"></div>
+        <div class="field"><label><span class="name">연료질량 <span>fuel mass</span></span><span class="val" id="lblFuel">6000 kg</span></label><input type="range" id="inFuel" min="500" max="16000" step="100" value="6000"></div>
+        <div class="field"><label><span class="name">연소율 <span>burn rate ṁ</span></span><span class="val" id="lblBurn">180 kg/s</span></label><input type="range" id="inBurn" min="30" max="600" step="10" value="180"></div>
+        <div class="field"><label><span class="name">중력 <span>gravity g</span></span><span class="val" id="lblG">0.0 m/s²</span></label><input type="range" id="inG" min="0" max="12" step="0.1" value="0"></div>
+      </div>
+      <div class="divider"></div>
+      <h2>프리셋 · presets</h2>
+      <div class="presets">
+        <button class="chip" data-preset="space">🛰 우주 (g=0)</button>
+        <button class="chip" data-preset="earth">🌍 지구 발사</button>
+        <button class="chip" data-preset="moon">🌘 달 발사</button>
+        <button class="chip demo" data-preset="demo">✦ 상대속도 데모</button>
+      </div>
+      <button class="btn" id="btnJump" style="border-color:#3A2F14;color:var(--amber)">⏭ v = vₑ 순간으로 이동</button>
+      <div class="divider"></div>
+      <h2>다단 로켓 · staging</h2>
+      <div class="tog" style="margin-bottom:4px"><span>2단 모드 <span style="color:var(--muted-2)">연료·구조를 반씩 분할</span></span><label class="switch"><input type="checkbox" id="tgStage"><span class="slider-t"></span></label></div>
+      <button class="btn" id="btnStage" style="border-color:#3A2F14;color:var(--amber)" disabled>◈ 1단 분리 (staging)</button>
+      <div class="hint" id="stageHint" style="display:none">2단 모드에서는 <b>1단 연료를 다 쓴 뒤</b> 분리하세요. 연료가 남았는데 분리하면 그 연료까지 버려져 손해입니다. 죽은 구조를 버리면 질량비가 좋아져 최종 Δv가 <b>도약</b>합니다.</div>
+      <div class="divider"></div>
+      <h2>표시 옵션 · display</h2>
+      <div class="toggles">
+        <div class="tog"><span>속도벡터 화살표 <span style="color:var(--muted-2)">arrows</span></span><label class="switch"><input type="checkbox" id="tgArrow" checked><span class="slider-t"></span></label></div>
+        <div class="tog"><span>배기가스 입자 <span style="color:var(--muted-2)">particles</span></span><label class="switch"><input type="checkbox" id="tgParticle" checked><span class="slider-t"></span></label></div>
+        <div class="tog"><span>지상 기준선 <span style="color:var(--muted-2)">ground grid</span></span><label class="switch"><input type="checkbox" id="tgGrid" checked><span class="slider-t"></span></label></div>
+        <div class="tog"><span>질량중심 마커 <span style="color:var(--muted-2)">center of mass</span></span><label class="switch"><input type="checkbox" id="tgCom" checked><span class="slider-t"></span></label></div>
+      </div>
+      <div class="speedrow" id="speedRow">
+        <span style="font-size:11px;color:var(--muted-2);font-family:'JetBrains Mono',monospace">배율</span>
+        <button class="sbtn" data-sp="0.25">0.25×</button><button class="sbtn on" data-sp="1">1×</button>
+        <button class="sbtn" data-sp="2">2×</button><button class="sbtn" data-sp="4">4×</button>
+      </div>
+      <div class="hint" id="hint"><b>관찰 포인트.</b> 로켓 기준틀에서 배기가스는 <b>항상</b> 같은 속도 vₑ로 뒤로 나갑니다. 하지만 지면에서 보면, 로켓이 vₑ보다 빨라지는 순간 배기가스는 <b>위로</b> 따라 올라갑니다.</div>
+      <button class="btn primary" id="btnSubmit" style="margin-top:2px">✓ 학습 마치고 제출</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ DASHBOARD VIEW ============ -->
+<div id="viewDash" hidden>
+  <div class="dash" id="dashRoot"></div>
+</div>
+
+<!-- ============ QUIZ OVERLAY ============ -->
+<div class="overlay" id="quizOverlay" hidden><div id="quizMount"></div></div>
+
+<script>
+"use strict";
+(function(){
+  const $ = id => document.getElementById(id);
+
+  /* =========================================================
+     CONFIG
+     ========================================================= */
+  const TEACHER_PIN = "1234";           // ← 배포 후 반드시 변경하세요
+  // Firebase 중앙수집을 켜려면 아래 config를 채우세요(비어있으면 이 기기 localStorage에만 저장).
+  const firebaseConfig = null;          // { apiKey:"...", projectId:"...", ... }
+
+  /* =========================================================
+     STORAGE  (localStorage 기본 + Cloud 확장지점)
+     ========================================================= */
+  const Cloud = {
+    enabled:false, db:null, col:'rocketLabSessions',
+    init(){
+      if(!firebaseConfig || !firebaseConfig.apiKey) return;      // config 없으면 로컬 전용
+      if(typeof firebase==='undefined'){ console.warn('[RocketLab] Firebase SDK 미로드'); return; }
+      try{
+        firebase.initializeApp(firebaseConfig);
+        this.db=firebase.firestore();
+        this.enabled=true;
+        console.log('[RocketLab] Firebase 중앙 수집 활성화됨');
+      }catch(e){ console.warn('[RocketLab] Firebase 초기화 실패:', e.message); }
+    },
+    async save(s){
+      if(!this.enabled) return;
+      try{ await this.db.collection(this.col).doc(s.id).set(s); }
+      catch(e){ console.warn('[RocketLab] 클라우드 저장 실패:', e.message); }
+    },
+    async fetchAll(){
+      if(!this.enabled) return [];
+      try{ const snap=await this.db.collection(this.col).get(); return snap.docs.map(d=>d.data()); }
+      catch(e){ console.warn('[RocketLab] 클라우드 조회 실패:', e.message); return []; }
+    }
+  };
+  const Storage = {
+    key:'rocketLab.sessions.v1',
+    all(){ try{ return JSON.parse(localStorage.getItem(this.key)) || []; }catch{ return []; } },
+    put(s){
+      const a=this.all(); const i=a.findIndex(x=>x.id===s.id);
+      if(i>=0) a[i]=s; else a.push(s);
+      localStorage.setItem(this.key, JSON.stringify(a));
+      if(Cloud.enabled) Cloud.save(s).catch(()=>{});
+    },
+    clear(){ localStorage.removeItem(this.key); },
+    merge(list){
+      const a=this.all(); const byId=new Map(a.map(x=>[x.id,x]));
+      for(const s of list) byId.set(s.id,s);
+      localStorage.setItem(this.key, JSON.stringify([...byId.values()]));
+    }
+  };
+  const uid = ()=> 's'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  Cloud.init();
+
+  /* =========================================================
+     QUESTIONS  (Predict–Observe–Explain)
+     선택지 오답은 오개념 유형(mis)에 매핑됩니다.
+     ========================================================= */
+  const Q = {
+    q1:{ text:'로켓 속도가 배기속도 vₑ를 넘어서면, 지면에 선 관측자가 본 배기가스는 어느 방향으로 움직일까요?',
+      opts:[['A','아래로 (로켓 반대쪽)'],['B','그 자리에 정지'],['C','위로 (로켓과 같은 방향)'],['D','배기가스는 나오지 않는다']],
+      correct:'C', mis:{A:'frame', B:'partial', D:'other'} },
+    q2:{ text:'로켓에 탄 사람이 측정한 배기가스의 분출 속도는, 로켓이 빨라질수록 어떻게 될까요?',
+      opts:[['A','점점 빨라진다'],['B','점점 느려진다'],['C','항상 일정하다 (vₑ)']],
+      correct:'C', mis:{A:'relvel', B:'relvel'} },
+    q3:{ text:'로켓 속도가 배기속도와 같아지는 (Δv = vₑ) 질량비 m₀/m 는 얼마일까요?',
+      opts:[['A','1'],['B','2'],['C','e ≈ 2.72'],['D','10']],
+      correct:'C', mis:{A:'log', B:'log', D:'log'} }
+  };
+  const MIS_LABEL = {
+    frame:'기준틀 미분화 (배기가스는 항상 아래)',
+    partial:'부분 이해 (정지까지만)',
+    relvel:'상대속도 불변 미인지',
+    log:'로그 관계 오류',
+    other:'기타'
+  };
+
+  /* =========================================================
+     SESSION / LOGGER
+     ========================================================= */
+  let session = null;
+  let mode = 'student';   // 'student' | 'teacher'
+  function newSession(sid,name){
+    return {
+      id:uid(), studentId:sid, studentName:name,
+      start:Date.now(), end:null, durationSec:0,
+      pre:{}, post:{},
+      beh:{ launches:0, resets:0, jumpCount:0, presets:[],
+        slider:{ve:0,dry:0,fuel:0,burn:0,g:0}, maxV:0, maxRatio:1,
+        reachedUp:false, observedZero:false },
+      events:[]
+    };
+  }
+  function logEvent(type, detail){
+    if(!session) return;
+    session.events.push({ t: Math.round((Date.now()-session.start)/100)/10, type, detail:detail||null });
+    if(session.events.length>500) session.events.shift();
+  }
+  function persist(){ if(session){ session.durationSec=Math.round((Date.now()-session.start)/1000); Storage.put(session); } }
+
+  /* =========================================================
+     ROUTER
+     ========================================================= */
+  const views={ login:$("viewLogin"), sim:$("viewSim"), dash:$("viewDash") };
+  function show(name){
+    for(const k in views) views[k].hidden = (k!==name);
+    $("whoBox").hidden = (name==="login");
+    if(name==="sim"){ applySimMode(); requestAnimationFrame(()=>{ window.Sim.resize(); window.Sim.draw(); }); }
+    if(name==="dash"){ window.Dash.render(); }
+  }
+  // 학생/교사에 따라 시뮬레이터 UI를 전환한다
+  function applySimMode(){
+    const t = (mode==='teacher');
+    $("btnSubmit").textContent = t ? "← 대시보드로 돌아가기" : "✓ 학습 마치고 제출";
+    $("btnToDash").hidden = !t;
+    const mb=$("missionBox"); if(mb) mb.style.display = t ? 'none' : '';
+    if(t) $("whoText").innerHTML = "교사 · <b>시뮬레이터 테스트</b>";
+  }
+  // 교사가 대시보드에서 시뮬레이터로 진입 (로그 미기록)
+  function enterSimAsTeacher(){ session=null; mode='teacher'; window.Sim.reset(); show('sim'); }
+
+  /* =========================================================
+     LOGIN
+     ========================================================= */
+  $("tabStudent").onclick=()=>{ $("tabStudent").classList.add("on"); $("tabTeacher").classList.remove("on"); $("paneStudent").hidden=false; $("paneTeacher").hidden=true; };
+  $("tabTeacher").onclick=()=>{ $("tabTeacher").classList.add("on"); $("tabStudent").classList.remove("on"); $("paneTeacher").hidden=false; $("paneStudent").hidden=true; };
+
+  $("btnEnter").onclick=()=>{
+    const sid=$("inSid").value.trim(), name=$("inName").value.trim();
+    if(!sid || !name){ $("errStudent").textContent="학번과 이름을 모두 입력하세요."; return; }
+    $("errStudent").textContent="";
+    session = newSession(sid,name);
+    mode = 'student';
+    $("whoText").innerHTML = "학생 · <b>"+escapeHtml(name)+"</b> ("+escapeHtml(sid)+")";
+    $("btnToDash").hidden = true;
+    window.Sim.reset();
+    show("sim");
+    openQuiz("pre");
+  };
+  $("btnTeacher").onclick=()=>{
+    if($("inPin").value !== TEACHER_PIN){ $("errTeacher").textContent="PIN이 올바르지 않습니다."; return; }
+    $("errTeacher").textContent="";
+    mode = 'teacher';
+    $("whoText").innerHTML = "교사 · <b>대시보드</b>";
+    $("btnToDash").hidden = false;
+    show("dash");
+  };
+  $("btnLogout").onclick=()=>{
+    if(session && !session.end && Object.keys(session.post).length===0){
+      if(!confirm("제출하지 않고 나가면 이 시도는 저장되지 않습니다. 나갈까요?")) return;
+    }
+    session=null; mode='student'; $("inPin").value=""; show("login");
+  };
+  $("btnToDash").onclick=()=>show("dash");
+
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  /* =========================================================
+     QUIZ (PoE) — pre 발사 전 / post 제출 시
+     ========================================================= */
+  function openQuiz(phase){
+    const overlay=$("quizOverlay"), mount=$("quizMount");
+    const list = phase==="pre" ? ['q1','q2'] : ['q1','q2','q3'];
+    const answers={};
+    const isPre = phase==="pre";
+    mount.innerHTML =
+      '<div class="quiz '+phase+'">'+
+      '<div class="qtag">'+(isPre?'발사 전 · 예측 Predict':'제출 · 사후 Explain')+'</div>'+
+      '<h3>'+(isPre?'먼저 예측해 볼까요?':'무엇을 발견했나요?')+'</h3>'+
+      '<div class="qsub">'+(isPre?'아직 정답을 몰라도 괜찮습니다. 직관대로 골라 주세요 — 시뮬레이터로 직접 확인하게 됩니다.':'시뮬레이터에서 관찰한 내용을 바탕으로 다시 골라 주세요.')+'</div>'+
+      list.map((qid,idx)=>{
+        const q=Q[qid];
+        return '<div class="qitem" data-qid="'+qid+'"><div class="qtext"><span class="n">Q'+(idx+1)+'</span>'+q.text+'</div>'+
+          '<div class="opts">'+q.opts.map(o=>'<div class="opt" data-k="'+o[0]+'"><span class="key">'+o[0]+'</span><span>'+o[1]+'</span></div>').join('')+'</div></div>';
+      }).join('')+
+      '<div class="qfoot"><button class="bigbtn '+(isPre?'amber':'cyan')+'" id="qSubmit" style="margin-top:10px">'+(isPre?'예측 저장하고 시작 →':'제출하기 →')+'</button></div>'+
+      (isPre?'<div class="note">예측은 채점되지 않습니다. 관찰 후 생각이 바뀌는 것이 학습의 핵심입니다.</div>':'')+
+      '</div>';
+    mount.querySelectorAll('.qitem').forEach(item=>{
+      const qid=item.dataset.qid;
+      item.querySelectorAll('.opt').forEach(opt=>{
+        opt.onclick=()=>{
+          item.querySelectorAll('.opt').forEach(o=>o.classList.remove('sel'));
+          opt.classList.add('sel'); answers[qid]=opt.dataset.k;
+        };
+      });
+    });
+    $("qSubmit").onclick=()=>{
+      if(Object.keys(answers).length < list.length){ alert("모든 문항에 답해 주세요."); return; }
+      if(isPre){ session.pre=answers; logEvent('pre_quiz',answers); overlay.hidden=true; }
+      else{
+        session.post=answers; logEvent('post_quiz',answers);
+        session.end=Date.now(); persist(); overlay.hidden=true;
+        showResult();
+      }
+    };
+    overlay.hidden=false;
+  }
+
+  function showResult(){
+    const overlay=$("quizOverlay"), mount=$("quizMount");
+    const correctCount = ['q1','q2','q3'].filter(q=>session.post[q]===Q[q].correct).length;
+    const preC = ['q1','q2'].filter(q=>session.pre[q]===Q[q].correct).length;
+    const postC = ['q1','q2'].filter(q=>session.post[q]===Q[q].correct).length;
+    let msg;
+    if(postC>preC) msg="예측이 관찰을 통해 바뀌었네요. 훌륭한 과학적 사고입니다.";
+    else if(postC===2) msg="두 기준틀을 정확히 이해하고 있습니다.";
+    else msg="아직 헷갈리는 부분이 있어요. 선생님과 함께 다시 살펴봐요.";
+    mount.innerHTML='<div class="quiz post"><div class="qtag">제출 완료 · saved</div>'+
+      '<h3>수고했어요, '+escapeHtml(session.studentName)+'님</h3>'+
+      '<div class="qsub">사후 정답 '+correctCount+' / 3 · 이 기록은 선생님께 전달됩니다.</div>'+
+      '<div class="hint" style="margin-bottom:16px">'+msg+'</div>'+
+      '<button class="bigbtn cyan" id="rDone">나가기</button></div>';
+    $("rDone").onclick=()=>{ overlay.hidden=true; session=null; show("login"); };
+    overlay.hidden=false;
+  }
+
+  $("btnSubmit").onclick=()=>{
+    if(mode==='teacher'){ show("dash"); return; }
+    if(!session){ show("login"); return; }
+    openQuiz("post");
+  };
+
+  // expose to later parts
+  window.__RL = { $, Storage, Cloud, Q, MIS_LABEL, session:()=>session, setSession:(s)=>session=s,
+    logEvent, persist, show, openQuiz, escapeHtml, enterSimAsTeacher };
+})();
+</script>
+
+<script>
+/* =========================================================
+   SIMULATOR ENGINE  (검증된 물리 + 로깅 훅)
+   ========================================================= */
+window.Sim = (function(){
+  const RL = window.__RL, $ = RL.$;
+  const cvG=$("cvGround"),ctxG=cvG.getContext("2d");
+  const cvR=$("cvRocket"),ctxR=cvR.getContext("2d");
+  const cvGr=$("cvGraph"),ctxGr=cvGr.getContext("2d");
+
+  const C={cyan:"#31D6E6",amber:"#FBBF24",down:"#4F8DF9",zero:"#FCD34D",up:"#FB6B5B",
+    grid:"rgba(90,120,170,0.14)",gridTxt:"rgba(120,150,200,0.4)"};
+  const P={ve:2000,dry:1000,fuel:6000,burn:180,g:0};
+  const opt={arrow:true,particle:true,grid:true,com:true,stage:false,speed:1};
+  const CAM_SCALE=0.35, EMIT_DT=0.045, P_LIFE=2.2;
+  let S={}, dimG,dimR,dimGr;
+
+  function freshState(){
+    const multi = opt.stage;
+    const dry1  = multi ? P.dry*0.5 : 0;
+    const dry2  = multi ? P.dry*0.5 : P.dry;
+    const fuel1 = multi ? P.fuel*0.5 : 0;      // 단일단은 fuel2에 전체 연료
+    const fuel2 = multi ? P.fuel*0.5 : P.fuel;
+    const m0 = P.dry + P.fuel;
+    return {t:0,v:0,y:0,a:0,idealDv:0,
+      dry1,dry2,fuel1,fuel2,separated:false,
+      m:dry1+dry2+fuel1+fuel2,m0,
+      running:false,groundP:[],rocketP:[],log:[],emitAcc:0,reachedFlag:false};
+  }
+  // 1단 분리: 빈 구조(dry1) + 아직 남은 1단 연료(fuel1)를 함께 투하
+  function separate(){
+    if(!opt.stage || S.separated) return false;
+    S.m -= (S.dry1 + S.fuel1);
+    S.fuel1 = 0; S.dry1 = 0; S.separated = true;
+    return true;
+  }
+  // 남은 총 연료 (1단+2단)
+  function fuelTot(){ return S.fuel1 + S.fuel2; }
+  // ---- logging helpers ----
+  function beh(){ const s=RL.session(); return s?s.beh:null; }
+  function markTasks(){
+    const b=beh(); if(!b) return;
+    if(b.observedZero) $("taskZero").classList.add("done");
+    if(b.reachedUp)   $("taskUp").classList.add("done");
+  }
+
+  function fit(cv,ctx){const r=cv.getBoundingClientRect();const d=window.devicePixelRatio||1;
+    cv.width=Math.round(r.width*d);cv.height=Math.round(r.height*d);ctx.setTransform(d,0,0,d,0,0);return{w:r.width,h:r.height};}
+  function resize(){dimG=fit(cvG,ctxG);dimR=fit(cvR,ctxR);dimGr=fit(cvGr,ctxGr);}
+  window.addEventListener("resize",()=>{ if(!$("viewSim").hidden){resize();draw();} });
+
+  function physicsStep(dt){
+    const burning = (S.fuel1>0 || S.fuel2>0);
+    if(burning){
+      const mdot=P.burn, thrust=P.ve*mdot, a=thrust/S.m-P.g;
+      S.v+=a*dt; S.y+=S.v*dt; S.a=a;
+      let dm=mdot*dt;
+      // 연소 순서: 1단 연료 먼저, 소진되면 2단 연료
+      if(S.fuel1>0){ const d=Math.min(dm,S.fuel1); S.idealDv+=P.ve*d/S.m; S.fuel1-=d; S.m-=d; dm-=d; }
+      if(dm>0 && S.fuel1<=0 && S.fuel2>0){ const d=Math.min(dm,S.fuel2); S.idealDv+=P.ve*d/S.m; S.fuel2-=d; S.m-=d; }
+      if(S.fuel1<0)S.fuel1=0; if(S.fuel2<0)S.fuel2=0;
+      S.emitAcc+=dt;
+      const exG=S.v-P.ve;
+      while(S.emitAcc>=EMIT_DT){
+        S.emitAcc-=EMIT_DT;
+        S.groundP.push({worldY:S.y,vy:exG,life:0,jitter:(Math.random()-.5)});
+        S.rocketP.push({life:0,jitter:(Math.random()-.5)});
+        if(S.groundP.length>260)S.groundP.shift();
+        if(S.rocketP.length>260)S.rocketP.shift();
+      }
+    } else { S.v+=-P.g*dt; S.y+=S.v*dt; S.a=-P.g; }
+    for(const p of S.groundP){p.worldY+=p.vy*dt;p.life+=dt;}
+    for(const p of S.rocketP){p.life+=dt;}
+    S.groundP=S.groundP.filter(p=>p.life<P_LIFE);
+    S.rocketP=S.rocketP.filter(p=>p.life<P_LIFE);
+    S.t+=dt;
+    S.log.push({t:S.t,v:S.v,ex:S.v-P.ve}); if(S.log.length>1200)S.log.shift();
+    // ---- learning-signal capture ----
+    const b=beh();
+    if(b){
+      if(S.v>b.maxV) b.maxV=S.v;
+      const ratio=S.m0/S.m; if(ratio>b.maxRatio) b.maxRatio=ratio;
+      if((S.fuel1>0||S.fuel2>0) && Math.abs(S.v-P.ve)<40 && !b.observedZero){ b.observedZero=true; RL.logEvent('observe_zero',{v:Math.round(S.v)}); markTasks(); }
+      if(S.v>P.ve*1.02 && !b.reachedUp){ b.reachedUp=true; RL.logEvent('observe_up',{v:Math.round(S.v)}); markTasks(); }
+    }
+  }
+
+  function starfield(ctx,dim,scrollY,density){
+    ctx.save();
+    for(let i=0;i<density;i++){
+      const sx=(i*97.13%dim.w); const base=(i*53.7%(dim.h*2));
+      let sy=(base-(scrollY*0.15)%(dim.h*2)); sy=((sy%(dim.h*2))+(dim.h*2))%(dim.h*2)-dim.h*0.5;
+      ctx.fillStyle=`rgba(160,190,230,${0.15+(i%5)*0.06})`;
+      const s=(i%7===0)?1.6:0.9; ctx.fillRect(sx,sy,s,s);
+    } ctx.restore();
+  }
+  function drawRocketShape(ctx,x,y,scale,flame){
+    ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);
+    if(flame>0.02){const fl=14+flame*26;const g=ctx.createLinearGradient(0,10,0,10+fl);
+      g.addColorStop(0,"#FFE08A");g.addColorStop(0.4,"#FF9A3C");g.addColorStop(1,"rgba(245,82,43,0)");
+      ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(-5,10);ctx.lineTo(5,10);ctx.lineTo(2.2,10+fl*0.75);ctx.lineTo(0,10+fl);ctx.lineTo(-2.2,10+fl*0.75);ctx.closePath();ctx.fill();}
+    ctx.fillStyle="#D8E2F0";ctx.beginPath();ctx.moveTo(0,-22);ctx.quadraticCurveTo(7,-14,7,-2);ctx.lineTo(7,10);ctx.lineTo(-7,10);ctx.lineTo(-7,-2);ctx.quadraticCurveTo(-7,-14,0,-22);ctx.closePath();ctx.fill();
+    ctx.fillStyle="#31D6E6";ctx.beginPath();ctx.arc(0,-6,3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="#8FA3C0";ctx.beginPath();ctx.moveTo(-7,4);ctx.lineTo(-13,12);ctx.lineTo(-7,10);ctx.closePath();ctx.fill();
+    ctx.beginPath();ctx.moveTo(7,4);ctx.lineTo(13,12);ctx.lineTo(7,10);ctx.closePath();ctx.fill();ctx.restore();
+  }
+  function arrow(ctx,x,y,len,color,w){
+    ctx.save();ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=w||2;
+    ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y+len);ctx.stroke();
+    const dir=len>=0?1:-1;const ay=y+len;
+    ctx.beginPath();ctx.moveTo(x,ay+dir*4);ctx.lineTo(x-3,ay-dir*2);ctx.lineTo(x+3,ay-dir*2);ctx.closePath();ctx.fill();ctx.restore();
+  }
+  function exhaustColor(ex){ if(Math.abs(ex)<40)return C.zero; return ex<0?C.down:C.up; }
+
+  function drawGround(){
+    const dim=dimG,ctx=ctxG; ctx.clearRect(0,0,dim.w,dim.h); starfield(ctx,dim,S.y,60);
+    const rSY=dim.h*0.34, camY=S.y;
+    if(opt.grid){
+      ctx.save();ctx.strokeStyle=C.grid;ctx.fillStyle=C.gridTxt;ctx.lineWidth=1;ctx.font="9px 'JetBrains Mono',monospace";
+      const span=400,topAlt=camY+rSY/CAM_SCALE;let first=Math.floor(topAlt/span)*span;
+      for(let alt=first;alt>camY-(dim.h-rSY)/CAM_SCALE;alt-=span){const sy=rSY+(camY-alt)*CAM_SCALE;if(sy<0||sy>dim.h)continue;
+        ctx.beginPath();ctx.moveTo(0,sy);ctx.lineTo(dim.w,sy);ctx.stroke();ctx.fillText(alt.toFixed(0)+" m",6,sy-3);}
+      const padY=rSY+camY*CAM_SCALE;if(padY>0&&padY<dim.h){ctx.strokeStyle="rgba(49,214,230,0.5)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,padY);ctx.lineTo(dim.w,padY);ctx.stroke();}
+      ctx.restore();
+    }
+    const cx=dim.w*0.5,nozzleY=rSY+11;
+    if(opt.particle){for(const p of S.groundP){const sy=rSY+(camY-p.worldY)*CAM_SCALE;if(sy<-20||sy>dim.h+20)continue;
+      ctx.save();ctx.globalAlpha=Math.max(0,1-p.life/P_LIFE)*0.85;ctx.fillStyle=exhaustColor(p.vy);ctx.beginPath();ctx.arc(cx+p.jitter*10,sy,2.1,0,Math.PI*2);ctx.fill();ctx.restore();}}
+    if(opt.arrow&&fuelTot()>0){const ex=S.v-P.ve,col=exhaustColor(ex),L=Math.max(-70,Math.min(70,-ex*0.06));
+      arrow(ctx,cx+22,nozzleY+6,L,col,2.5);ctx.save();ctx.fillStyle=col;ctx.font="10px 'JetBrains Mono',monospace";ctx.fillText((ex>=0?"+":"")+ex.toFixed(0),cx+30,nozzleY+(L<0?0:12));ctx.restore();}
+    if(opt.arrow){const Lr=Math.max(-70,Math.min(70,-S.v*0.06));arrow(ctx,cx-22,rSY-6,Lr,C.cyan,2.5);}
+    // 질량중심 마커 : y_cm = -½·g·t²  (무중력이면 발사대에 정지)
+    if(opt.com){
+      const ycm=-0.5*P.g*S.t*S.t;
+      const sy=rSY+(camY-ycm)*CAM_SCALE;
+      if(sy>-20 && sy<dim.h+20){
+        const mx=cx-46;
+        ctx.save();
+        ctx.setLineDash([3,3]); ctx.strokeStyle="rgba(179,140,255,0.5)"; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(0,sy); ctx.lineTo(dim.w,sy); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle="rgba(179,140,255,0.30)"; ctx.strokeStyle="#B38CFF"; ctx.lineWidth=1.6;
+        ctx.beginPath(); ctx.moveTo(mx,sy-5); ctx.lineTo(mx+5,sy); ctx.lineTo(mx,sy+5); ctx.lineTo(mx-5,sy); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle="#C7A6FF"; ctx.font="9px 'JetBrains Mono',monospace"; ctx.textAlign="left";
+        ctx.fillText("질량중심 CM", mx+9, sy-6);
+        ctx.restore();
+      }
+    }
+    drawRocketShape(ctx,cx,rSY,1.0,fuelTot()>0?1:0);
+  }
+  function drawRocket(){
+    const dim=dimR,ctx=ctxR;ctx.clearRect(0,0,dim.w,dim.h);starfield(ctx,dim,S.y,60);
+    const cx=dim.w*0.5,rSY=dim.h*0.42,nozzleY=rSY+11;
+    if(opt.grid){ctx.save();ctx.strokeStyle=C.grid;ctx.fillStyle=C.gridTxt;ctx.lineWidth=1;ctx.font="9px 'JetBrains Mono',monospace";
+      const span=400,camY=S.y;let first=Math.floor((camY+rSY/CAM_SCALE)/span)*span;
+      for(let alt=first;alt>camY-(dim.h-rSY)/CAM_SCALE;alt-=span){const sy=rSY+(camY-alt)*CAM_SCALE;if(sy<0||sy>dim.h)continue;ctx.beginPath();ctx.moveTo(0,sy);ctx.lineTo(dim.w,sy);ctx.stroke();}
+      const padY=rSY+camY*CAM_SCALE;if(padY>0&&padY<dim.h){ctx.strokeStyle="rgba(49,214,230,0.4)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,padY);ctx.lineTo(dim.w,padY);ctx.stroke();}
+      ctx.restore();}
+    if(opt.particle){for(const p of S.rocketP){const sy=nozzleY+P.ve*p.life*CAM_SCALE;if(sy<-20||sy>dim.h+20)continue;
+      ctx.save();ctx.globalAlpha=Math.max(0,1-p.life/P_LIFE)*0.85;ctx.fillStyle=C.amber;ctx.beginPath();ctx.arc(cx+p.jitter*10,sy,2.1,0,Math.PI*2);ctx.fill();ctx.restore();}}
+    if(opt.arrow&&fuelTot()>0){const L=Math.min(70,P.ve*0.06);arrow(ctx,cx+22,nozzleY+6,L,C.amber,2.5);ctx.save();ctx.fillStyle=C.amber;ctx.font="10px 'JetBrains Mono',monospace";ctx.fillText("-"+P.ve.toFixed(0),cx+30,nozzleY+16);ctx.restore();}
+    drawRocketShape(ctx,cx,rSY,1.0,fuelTot()>0?1:0);
+    ctx.save();ctx.fillStyle="rgba(132,150,180,0.5)";ctx.font="10px 'JetBrains Mono',monospace";ctx.fillText("로켓 정지 · 배경이 v로 흐름",12,dim.h-12);ctx.restore();
+  }
+  function drawGraph(){
+    const dim=dimGr,ctx=ctxGr;ctx.clearRect(0,0,dim.w,dim.h);const pad=6,w=dim.w,h=dim.h;
+    if(S.log.length<2)return;
+    let tMax=S.log[S.log.length-1].t||1,vMax=1,vMin=0;
+    for(const d of S.log){vMax=Math.max(vMax,d.v,d.ex);vMin=Math.min(vMin,d.ex,0);}
+    const rng=(vMax-vMin)||1,X=t=>pad+(t/tMax)*(w-2*pad),Y=v=>(h-pad)-((v-vMin)/rng)*(h-2*pad);
+    ctx.strokeStyle="rgba(120,140,175,0.25)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad,Y(0));ctx.lineTo(w-pad,Y(0));ctx.stroke();
+    ctx.fillStyle="rgba(120,140,175,0.6)";ctx.font="9px 'JetBrains Mono',monospace";ctx.fillText("0",w-pad-8,Y(0)-3);
+    ctx.strokeStyle="rgba(251,191,36,0.35)";ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(pad,Y(P.ve));ctx.lineTo(w-pad,Y(P.ve));ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle="rgba(251,191,36,0.7)";ctx.fillText("vₑ",pad+2,Y(P.ve)-3);
+    ctx.strokeStyle=C.amber;ctx.lineWidth=1.6;ctx.beginPath();S.log.forEach((d,i)=>{const x=X(d.t),y=Y(d.ex);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();
+    ctx.strokeStyle=C.cyan;ctx.lineWidth=1.8;ctx.beginPath();S.log.forEach((d,i)=>{const x=X(d.t),y=Y(d.v);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();
+  }
+  const el={vExhaust:$("vExhaust"),exCaption:$("exCaption"),heroCell:$("heroCell"),vRocket:$("vRocket"),vE:$("vE"),
+    massRatio:$("massRatio"),dvTheory:$("dvTheory"),fuelLeft:$("fuelLeft"),alt:$("alt"),tElapsed:$("tElapsed"),
+    accel:$("accel"),vcm:$("vcm")};
+  function updateTelemetry(){
+    const ex=S.v-P.ve;el.vRocket.textContent=S.v.toFixed(0);el.vE.textContent=P.ve.toFixed(0);
+    const ratio=S.m0/S.m;el.massRatio.textContent=ratio.toFixed(2);
+    el.dvTheory.textContent=S.idealDv.toFixed(0);   // 누적 이상 Δv (다단이면 분리 이득 반영)
+    el.fuelLeft.textContent=fuelTot().toFixed(0);el.alt.textContent=S.y.toFixed(0);el.tElapsed.textContent=S.t.toFixed(1);
+    if(el.accel) el.accel.textContent=S.a.toFixed(1);
+    if(el.vcm){ const vcm=-P.g*S.t; el.vcm.textContent=vcm.toFixed(1); el.vcm.parentElement.style.color = Math.abs(vcm)<0.05?"var(--zero)":"var(--muted)"; }
+    el.vExhaust.textContent=(ex>=0?"+":"")+ex.toFixed(0)+" m/s";const col=exhaustColor(ex);el.vExhaust.style.color=col;
+    let cap;if(Math.abs(ex)<40)cap="지상 기준 거의 정지 — 로켓 속도 ≈ 배기속도";
+    else if(ex<0)cap="지상 기준 아래로 분사 (로켓이 vₑ보다 느림)";else cap="지상 기준 위로 이동 — 로켓이 vₑ를 넘어섬!";
+    el.exCaption.textContent=cap;el.exCaption.style.color=col;
+    el.heroCell.style.boxShadow=Math.abs(ex)<40?"0 0 0 1px #FCD34D, 0 0 22px rgba(252,211,77,0.25)":"none";
+    updateStageBtn();
+  }
+
+  let last=performance.now();
+  function loop(now){
+    const realDt=Math.min(0.05,(now-last)/1000);last=now;
+    if(S.running){
+      const simDt=realDt*opt.speed;const steps=Math.max(1,Math.ceil(simDt/0.008));const h=simDt/steps;
+      for(let i=0;i<steps;i++)physicsStep(h);
+      if(fuelTot()<=0&&S.y<=0&&S.v<0){S.y=0;S.v=0;S.running=false;setPlay(false);}
+    }
+    if(!$("viewSim").hidden) draw();
+    requestAnimationFrame(loop);
+  }
+  function draw(){ if(!dimG||!dimR||!dimGr) return; drawGround();drawRocket();drawGraph();updateTelemetry();}
+
+  function setPlay(run){S.running=run;$("btnPlay").innerHTML=run?"❚❚ 일시정지":(S.t>0?"▶ 계속":"▶ 발사");}
+  function reset(){S=freshState();setPlay(false);
+    $("taskZero").classList.remove("done"); $("taskUp").classList.remove("done");
+    draw();}
+
+  $("btnPlay").onclick=()=>{
+    const wasStart = !S.running && S.t===0;
+    setPlay(!S.running);last=performance.now();
+    if(wasStart){ const b=beh(); if(b){b.launches++; RL.logEvent('launch',{ve:P.ve,dry:P.dry,fuel:P.fuel,burn:P.burn,g:P.g}); } }
+  };
+  $("btnReset").onclick=()=>{ const b=beh(); if(b){b.resets++;RL.logEvent('reset');} reset(); };
+
+  function bindSlider(id,key,fmt,lbl){
+    const inp=$(id),label=$(lbl);
+    inp.oninput=()=>{P[key]=parseFloat(inp.value);label.textContent=fmt(P[key]);
+      if(!S.running&&S.t===0){S=freshState();}draw();};
+    inp.onchange=()=>{const b=beh();if(b){b.slider[key]++;RL.logEvent('param',{[key]:P[key]});}};
+  }
+  bindSlider("inVe","ve",v=>v.toFixed(0)+" m/s","lblVe");
+  bindSlider("inDry","dry",v=>v.toFixed(0)+" kg","lblDry");
+  bindSlider("inFuel","fuel",v=>v.toFixed(0)+" kg","lblFuel");
+  bindSlider("inBurn","burn",v=>v.toFixed(0)+" kg/s","lblBurn");
+  bindSlider("inG","g",v=>v.toFixed(1)+" m/s²","lblG");
+
+  $("tgArrow").onchange=e=>{opt.arrow=e.target.checked;draw();};
+  $("tgParticle").onchange=e=>{opt.particle=e.target.checked;draw();};
+  $("tgGrid").onchange=e=>{opt.grid=e.target.checked;draw();};
+  $("tgCom").onchange=e=>{opt.com=e.target.checked;draw();};
+  $("tgStage").onchange=e=>{
+    opt.stage=e.target.checked;
+    $("stageHint").style.display = opt.stage?'':'none';
+    // 슬라이더 라벨 안내
+    $("lblFuel").innerHTML = opt.stage ? P.fuel+" kg <span style='color:var(--muted-2)'>(반씩)</span>" : P.fuel+" kg";
+    reset();
+    const b=beh(); if(b){ RL.logEvent('stage_mode', opt.stage); }
+  };
+  $("btnStage").onclick=()=>{
+    if(separate()){ draw(); const b=beh(); if(b){ RL.logEvent('separate',{fuel1_left:Math.round(S.fuel1), v:Math.round(S.v)}); } }
+  };
+  // 매 프레임 분리 버튼 상태 갱신
+  function updateStageBtn(){
+    const btn=$("btnStage"); if(!btn) return;
+    if(!opt.stage){ btn.disabled=true; btn.textContent="◈ 1단 분리 (2단 모드 전용)"; btn.style.borderColor="#2A2A2A"; return; }
+    if(S.separated){ btn.disabled=true; btn.textContent="✓ 1단 분리 완료"; btn.style.borderColor="#1B4A2E"; btn.style.color="var(--good)"; return; }
+    btn.disabled=false; btn.style.color="var(--amber)";
+    if(S.fuel1<=0.1){ btn.textContent="◈ 지금 분리하세요! (1단 연료 소진)"; btn.style.borderColor="var(--amber)"; }
+    else { btn.textContent="◈ 1단 분리 (연료 소진 후 권장)"; btn.style.borderColor="#3A2F14"; }
+  }
+  $("speedRow").querySelectorAll(".sbtn").forEach(b=>{b.onclick=()=>{opt.speed=parseFloat(b.dataset.sp);
+    $("speedRow").querySelectorAll(".sbtn").forEach(x=>x.classList.remove("on"));b.classList.add("on");};});
+
+  function applyPreset(name){
+    const map={space:{ve:2000,dry:1000,fuel:6000,burn:180,g:0},earth:{ve:2800,dry:1500,fuel:12000,burn:400,g:9.8},
+      moon:{ve:2200,dry:1000,fuel:5000,burn:160,g:1.6},demo:{ve:1400,dry:1000,fuel:4200,burn:90,g:0}};
+    const c=map[name];if(!c)return;Object.assign(P,c);
+    $("inVe").value=P.ve;$("lblVe").textContent=P.ve+" m/s";$("inDry").value=P.dry;$("lblDry").textContent=P.dry+" kg";
+    $("inFuel").value=P.fuel;$("lblFuel").textContent=P.fuel+" kg";$("inBurn").value=P.burn;$("lblBurn").textContent=P.burn+" kg/s";
+    $("inG").value=P.g;$("lblG").textContent=P.g.toFixed(1)+" m/s²";
+    reset();
+    const b=beh();if(b){if(!b.presets.includes(name))b.presets.push(name);RL.logEvent('preset',name);}
+    if(name==="demo"){$("hint").innerHTML="<b>상대속도 데모.</b> g=0, 연료비가 넉넉해 로켓 속도가 vₑ(1400)를 넘어섭니다. <b>v=vₑ 순간으로</b> 버튼을 눌러 배기가스가 지상 기준 <b>정지</b>하는 장면을 확인하세요.";}
+  }
+  document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>applyPreset(c.dataset.preset));
+
+  $("btnJump").onclick=()=>{
+    if(S.t===0){S=freshState();}setPlay(false);let guard=0;
+    while(S.v<P.ve&&fuelTot()>0&&guard<200000){physicsStep(0.004);guard++;}draw();
+    const b=beh();if(b){b.jumpCount++;RL.logEvent('jump',{reached:S.v>=P.ve,v:Math.round(S.v)});}
+    if(S.v>=P.ve){$("hint").innerHTML="<b>도달!</b> 지금 로켓 속도 v ≈ vₑ 입니다. 지상 기준 배기가스 속도(상단 큰 숫자)가 <b>0 근처</b>임을 확인하세요 — 이 순간 배기가스는 지면에서 볼 때 <b>정지</b>합니다.";}
+    else{$("hint").innerHTML="<b>연료 부족.</b> 현재 설정으로는 v가 vₑ에 도달하지 못했습니다 (Δv=vₑ·ln(m₀/m)이 vₑ보다 작음). 연료질량을 늘리거나 <b>상대속도 데모</b> 프리셋을 사용하세요.";}
+  };
+
+  S=freshState();
+  resize();
+  requestAnimationFrame(loop);
+  return { reset, resize, draw };
+})();
+
+/* =========================================================
+   TEACHER DASHBOARD
+   ========================================================= */
+window.Dash = (function(){
+  const RL=window.__RL,$=RL.$,Storage=RL.Storage,Cloud=RL.Cloud,Q=RL.Q,MIS=RL.MIS_LABEL,esc=RL.escapeHtml;
+  const cq=(obj,q)=> obj && obj[q]===Q[q].correct;
+
+  function engagement(b){ return b.launches + b.jumpCount*2 + b.presets.length + (b.reachedUp?3:0) + (b.observedZero?3:0); }
+
+  function analyze(s){
+    const done = !!(s.end && s.post && s.post.q1);
+    const post1=cq(s.post,'q1'), post2=cq(s.post,'q2'), post3=cq(s.post,'q3');
+    const pre1=cq(s.pre,'q1'), pre2=cq(s.pre,'q2');
+    const allPost = post1 && post2;
+    const allPre = pre1 && pre2;
+    const eng = engagement(s.beh);
+    let status;
+    if(!done) status='incomplete';
+    else if(allPost && allPre) status='good';
+    else if(allPost && !allPre) status='fix';
+    else { status = (!s.beh.observedZero || eng<3) ? 'bad' : 'warn'; }
+    // misconception tags from wrong POST answers
+    const mis=[];
+    if(done){
+      if(!post1 && s.post.q1) mis.push(Q.q1.mis[s.post.q1]);
+      if(!post2 && s.post.q2) mis.push(Q.q2.mis[s.post.q2]);
+    }
+    return {done,post1,post2,post3,pre1,pre2,allPost,allPre,eng,status,mis:mis.filter(Boolean)};
+  }
+
+  function latestByStudent(sessions){
+    const m=new Map();
+    for(const s of sessions){ const k=s.studentId+'|'+s.studentName;
+      if(!m.has(k) || s.start > m.get(k).start) m.set(k,s); }
+    return [...m.values()].sort((a,b)=>b.start-a.start);
+  }
+
+  const STAPI={good:['good','이해 완료'],fix:['fix','오개념 교정됨'],warn:['warn','오답 잔존'],bad:['bad','도움 필요'],incomplete:['warn','미제출']};
+
+  async function render(){
+    const root=$("dashRoot");
+    if(Cloud.enabled){
+      root.innerHTML=head()+'<div class="box"><div class="empty">클라우드에서 기록을 동기화하는 중…</div></div>';
+      wireHead();
+      const remote=await Cloud.fetchAll();
+      if(remote.length) Storage.merge(remote);
+    }
+    const all=Storage.all();
+    const studs=latestByStudent(all);
+    const rows=studs.map(s=>({s,a:analyze(s)}));
+
+    if(studs.length===0){
+      root.innerHTML=head()+'<div class="box"><div class="empty">아직 제출된 학생 기록이 없습니다.<br>학생이 입장 → 예측 → 시뮬레이션 → <b>제출</b>을 완료하면 여기에 나타납니다.</div></div>';
+      wireHead(); return;
+    }
+
+    // aggregates
+    const done=rows.filter(r=>r.a.done);
+    const nStu=studs.length;
+    const preRate = avg(done.map(r=>((r.a.pre1?1:0)+(r.a.pre2?1:0))/2));
+    const postRate= avg(done.map(r=>((r.a.post1?1:0)+(r.a.post2?1:0))/2));
+    const nFix=rows.filter(r=>r.a.status==='fix').length;
+    const nStuck=rows.filter(r=>r.a.status==='warn'||r.a.status==='bad').length;
+    const nHelp=rows.filter(r=>r.a.status==='bad').length;
+
+    // misconception distribution
+    const misCount={};
+    rows.forEach(r=>r.a.mis.forEach(m=>misCount[m]=(misCount[m]||0)+1));
+    // observation gaps
+    const noZero=done.filter(r=>!r.s.beh.observedZero).length;
+    const noUp=done.filter(r=>!r.s.beh.reachedUp).length;
+
+    root.innerHTML = head() +
+      '<div class="cards">'+
+        card('참여 학생', nStu, done.length+'명 제출 완료') +
+        card('사전 정답률', pct(preRate), 'Q1·Q2 평균') +
+        card('사후 정답률', pct(postRate), (postRate>=preRate?'▲ ':'▼ ')+pct(Math.abs(postRate-preRate))+' 변화', postRate>=preRate?'var(--good)':'var(--bad)') +
+        card('오개념 교정', nFix, '예측 오답 → 사후 정답', 'var(--fix)') +
+        card('도움 필요', nHelp, '사후 오답 + 핵심장면 미관찰', nHelp>0?'var(--bad)':'var(--muted)') +
+      '</div>'+
+      '<div class="grid2">'+
+        '<div class="box"><div class="bt">학생별 기록 · 클릭하면 상세</div>'+ table(rows) +'</div>'+
+        '<div class="box"><div class="bt">오개념 분포 · misconception</div>'+ misBars(misCount, rows.length) +
+          '<div class="bt" style="margin-top:18px">관찰 미도달 · observation gap</div>'+
+          gapBars([['배기가스 정지(v≈vₑ) 미관찰',noZero],['배기가스 상승(v&gt;vₑ) 미관찰',noUp]], done.length) +
+        '</div>'+
+      '</div>'+
+      '<div class="box" id="detailBox"><div class="empty">학생 행을 클릭하면 개별 행동 로그와 타임라인이 표시됩니다.</div></div>';
+
+    wireHead();
+    // row clicks
+    root.querySelectorAll('tr.srow').forEach(tr=>{
+      tr.onclick=()=>{ const id=tr.dataset.id; const rec=rows.find(r=>r.s.id===id); if(rec) showDetail(rec); };
+    });
+  }
+
+  function head(){
+    return '<div class="drow"><h2 class="disp">교사 대시보드</h2>'+
+      '<span class="badge '+(Cloud.enabled?'good':'warn')+'">'+(Cloud.enabled?'☁ 클라우드 연결됨 (전 기기 수집)':'⚠ 이 기기 로컬 저장')+'</span>'+
+      '<div class="dactions">'+
+        '<button class="minibtn" id="dOpenSim" style="border-color:#1C6C82;color:#31D6E6">▶ 시뮬레이터 테스트</button>'+
+        '<button class="minibtn" id="dRefresh">↻ 새로고침</button>'+
+        '<button class="minibtn" id="dCsv">CSV 내보내기</button>'+
+        '<button class="minibtn" id="dJson">JSON 내보내기</button>'+
+        '<button class="minibtn" id="dImport">가져오기</button>'+
+        '<button class="minibtn" id="dClear" style="color:var(--bad)">전체 삭제</button>'+
+        '<input type="file" id="dFile" accept="application/json" hidden>'+
+      '</div></div>';
+  }
+  function wireHead(){
+    $("dOpenSim").onclick=()=>RL.enterSimAsTeacher();
+    $("dRefresh").onclick=render;
+    $("dCsv").onclick=exportCsv;
+    $("dJson").onclick=exportJson;
+    $("dImport").onclick=()=>$("dFile").click();
+    $("dFile").onchange=importJson;
+    $("dClear").onclick=()=>{ if(confirm("모든 학생 기록을 삭제할까요? 되돌릴 수 없습니다.")){ Storage.clear(); render(); } };
+  }
+
+  function card(k,v,d,color){ return '<div class="scard"><div class="sk">'+k+'</div><div class="sv" style="color:'+(color||'var(--text)')+'">'+v+'</div><div class="sd">'+d+'</div></div>'; }
+
+  function table(rows){
+    let h='<table><thead><tr><th>학생</th><th>체류</th><th>발사</th><th>정지✓</th><th>상승✓</th><th>예측 → 사후</th><th>상태</th></tr></thead><tbody>';
+    for(const {s,a} of rows){
+      const zero=s.beh.observedZero?'<span class="ck">●</span>':'<span class="cx">○</span>';
+      const up=s.beh.reachedUp?'<span class="ck">●</span>':'<span class="cx">○</span>';
+      const pp='<span class="pill">'+((a.pre1?1:0)+(a.pre2?1:0))+'/2 → '+(a.done?((a.post1?1:0)+(a.post2?1:0))+'/2':'—')+'</span>';
+      const st=STAPI[a.status];
+      h+='<tr class="srow" data-id="'+s.id+'"><td><b>'+esc(s.studentName)+'</b> <span class="pill">'+esc(s.studentId)+'</span></td>'+
+        '<td class="pill">'+s.durationSec+'s</td><td class="pill">'+s.beh.launches+'</td><td>'+zero+'</td><td>'+up+'</td><td>'+pp+'</td>'+
+        '<td><span class="badge '+st[0]+'">'+st[1]+'</span></td></tr>';
+    }
+    return h+'</tbody></table>';
+  }
+
+  function misBars(counts,total){
+    const keys=Object.keys(counts);
+    if(keys.length===0) return '<div class="empty" style="padding:16px">사후 오답 없음 — 오개념이 감지되지 않았습니다.</div>';
+    const colors={frame:'var(--down)',partial:'var(--zero)',relvel:'var(--up)',log:'#A78BFA',other:'var(--muted)'};
+    return '<div class="bar">'+keys.sort((a,b)=>counts[b]-counts[a]).map(k=>{
+      const w=Math.round(counts[k]/total*100);
+      return '<div class="barrow"><span class="bl">'+MIS[k]+'</span><span class="btrack"><span class="bfill" style="width:'+Math.max(6,w)+'%;background:'+(colors[k]||'var(--muted)')+'"></span></span><span class="bn">'+counts[k]+'</span></div>';
+    }).join('')+'</div>';
+  }
+  function gapBars(pairs,total){
+    return '<div class="bar">'+pairs.map(([label,n])=>{
+      const w=total?Math.round(n/total*100):0;
+      return '<div class="barrow"><span class="bl">'+label+'</span><span class="btrack"><span class="bfill" style="width:'+Math.max(6,w)+'%;background:var(--amber)"></span></span><span class="bn">'+n+'</span></div>';
+    }).join('')+'</div>';
+  }
+
+  function showDetail({s,a}){
+    const box=$("detailBox");
+    const st=STAPI[a.status];
+    const preTxt=q=>s.pre[q]?s.pre[q]:'—', postTxt=q=>s.post[q]?s.post[q]:'—';
+    const ck=(b)=>b?'<span class="ck">정답</span>':'<span style="color:var(--bad)">오답</span>';
+    box.innerHTML=
+      '<div class="detail"><div class="dh"><span class="nm">'+esc(s.studentName)+'</span><span class="pill">'+esc(s.studentId)+'</span>'+
+      '<span class="badge '+st[0]+'">'+st[1]+'</span></div>'+
+      '<div class="kv">'+
+        kv('체류시간',s.durationSec+' s')+kv('발사',s.beh.launches)+kv('리셋',s.beh.resets)+kv('v=vₑ 점프',s.beh.jumpCount)+
+        kv('사용 프리셋',s.beh.presets.length?s.beh.presets.join(', '):'—')+kv('최대 v',Math.round(s.beh.maxV)+' m/s')+
+        kv('최대 질량비',s.beh.maxRatio.toFixed(2))+kv('참여도 점수',a.eng)+
+        kv('정지 관찰',s.beh.observedZero?'✓':'✗')+kv('상승 관찰',s.beh.reachedUp?'✓':'✗')+
+      '</div>'+
+      '<div class="kv">'+
+        kv('Q1 예측→사후', preTxt('q1')+' → '+postTxt('q1')+' '+(a.done?ck(a.post1):''))+
+        kv('Q2 예측→사후', preTxt('q2')+' → '+postTxt('q2')+' '+(a.done?ck(a.post2):''))+
+        kv('Q3 (심화)', postTxt('q3')+' '+(a.done?ck(a.post3):''))+
+      '</div>'+
+      (a.mis.length?'<div class="hint" style="margin-bottom:12px"><b>감지된 오개념:</b> '+a.mis.map(m=>MIS[m]).join(' · ')+'</div>':'')+
+      '<div class="bt">행동 타임라인 · timeline</div>'+
+      '<div class="tl">'+ (s.events.length? s.events.map(e=>'<div class="ev"><span class="et">'+e.t+'s</span><span class="ey">'+e.type+'</span><span>'+(e.detail?esc(JSON.stringify(e.detail)):'')+'</span></div>').join('') : '<div class="ev">기록된 이벤트 없음</div>') +'</div>'+
+      '</div>';
+    box.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+  function kv(k,v){ return '<div class="item"><div class="ik">'+k+'</div><div class="iv">'+v+'</div></div>'; }
+
+  // ---- export ----
+  function download(name,text,mime){
+    const blob=new Blob([text],{type:mime});const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);
+  }
+  function exportJson(){ download('rocket_lab_data_'+stamp()+'.json', JSON.stringify(Storage.all(),null,2),'application/json'); }
+  function exportCsv(){
+    const rows=latestByStudent(Storage.all()).map(s=>{const a=analyze(s);
+      return [s.studentId,s.studentName,s.durationSec,s.beh.launches,s.beh.jumpCount,s.beh.presets.join('|'),
+        s.beh.observedZero,s.beh.reachedUp,Math.round(s.beh.maxV),s.beh.maxRatio.toFixed(2),
+        s.pre.q1||'',s.pre.q2||'',s.post.q1||'',s.post.q2||'',s.post.q3||'',a.status,a.mis.map(m=>MIS[m]).join('|')];});
+    const header=['student_id','name','duration_s','launches','jumps','presets','observed_zero','reached_up','max_v','max_ratio','pre_q1','pre_q2','post_q1','post_q2','post_q3','status','misconception'];
+    const csv=[header].concat(rows).map(r=>r.map(x=>{const v=String(x==null?'':x);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}).join(',')).join('\n');
+    download('rocket_lab_summary_'+stamp()+'.csv','\ufeff'+csv,'text/csv');
+  }
+  function importJson(e){
+    const f=e.target.files[0];if(!f)return;const r=new FileReader();
+    r.onload=()=>{try{const data=JSON.parse(r.result);if(Array.isArray(data)){Storage.merge(data);render();alert(data.length+'개 기록을 가져왔습니다.');}else alert('올바른 형식이 아닙니다.');}catch{alert('파일을 읽을 수 없습니다.');}};
+    r.readAsText(f);e.target.value='';
+  }
+  function stamp(){const d=new Date();return d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+('0'+d.getDate()).slice(-2)+'_'+('0'+d.getHours()).slice(-2)+('0'+d.getMinutes()).slice(-2);}
+  const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+  const pct=x=>Math.round(x*100)+'%';
+
+  return { render };
+})();
+</script>
+</body>
+</html>

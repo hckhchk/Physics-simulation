@@ -8,6 +8,7 @@ Live site: https://hckhchk.github.io/Physics-simulation/
 
 ### Rocket Lab
 - [Rocket Lab 2](https://hckhchk.github.io/Physics-simulation/rocket_lab_2.html)
+- [Rocket Lab 3](https://hckhchk.github.io/Physics-simulation/rocket_lab_3.html)
 
 ### Magnetic Field
 - [Magnetic Field Simulation 1](https://hckhchk.github.io/Physics-simulation/magnetic_field_simulation_1.html)
